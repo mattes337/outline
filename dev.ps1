@@ -1,0 +1,102 @@
+# PowerShell script to manage Outline development environment
+
+param (
+    [string]$command = "help"
+)
+
+function Show-Help {
+    Write-Host "Outline Development Environment Helper"
+    Write-Host "-------------------------------------"
+    Write-Host "Usage: .\dev.ps1 [command]"
+    Write-Host ""
+    Write-Host "Commands:"
+    Write-Host "  start       - Start the development environment in detached mode"
+    Write-Host "  dev         - Start the development environment with hot reloading (interactive)"
+    Write-Host "  stop        - Stop the development environment"
+    Write-Host "  restart     - Restart the development environment"
+    Write-Host "  logs        - Show logs from all services"
+    Write-Host "  build       - Rebuild the Outline development image"
+    Write-Host "  shell       - Open a shell in the Outline container"
+    Write-Host "  migrate     - Run database migrations"
+    Write-Host "  reset-db    - Reset the database (WARNING: Deletes all data)"
+    Write-Host "  clean       - Stop and remove all containers and volumes"
+    Write-Host "  help        - Show this help message"
+}
+
+function Start-Environment {
+    Write-Host "Starting Outline development environment..."
+    docker-compose -f docker-compose.dev.yml up -d
+    Write-Host "Environment started. Access the application at http://localhost:3000"
+    Write-Host "Hot reloading is enabled - your changes will be reflected automatically"
+}
+
+function Stop-Environment {
+    Write-Host "Stopping Outline development environment..."
+    docker-compose -f docker-compose.dev.yml down
+}
+
+function Show-Logs {
+    docker-compose -f docker-compose.dev.yml logs -f
+}
+
+function Build-Image {
+    Write-Host "Building Outline development image..."
+    docker-compose -f docker-compose.dev.yml build outline
+}
+
+function Open-Shell {
+    docker-compose -f docker-compose.dev.yml exec outline /bin/bash
+}
+
+function Run-Migrations {
+    Write-Host "Running database migrations..."
+    docker-compose -f docker-compose.dev.yml exec outline yarn db:migrate
+}
+
+function Reset-Database {
+    Write-Host "WARNING: This will delete all data in the database."
+    $confirmation = Read-Host "Are you sure you want to continue? (y/n)"
+    if ($confirmation -eq 'y') {
+        Write-Host "Resetting database..."
+        docker-compose -f docker-compose.dev.yml exec outline yarn db:reset
+    }
+}
+
+function Clean-Environment {
+    Write-Host "WARNING: This will stop and remove all containers and volumes."
+    $confirmation = Read-Host "Are you sure you want to continue? (y/n)"
+    if ($confirmation -eq 'y') {
+        Write-Host "Cleaning up environment..."
+        docker-compose -f docker-compose.dev.yml down -v
+    }
+}
+
+function Dev-Environment {
+    Write-Host "Starting Outline development environment with hot reloading..." -ForegroundColor Green
+    Write-Host "Press Ctrl+C to stop the environment" -ForegroundColor Yellow
+
+    # Stop any running containers first
+    docker-compose -f docker-compose.dev.yml down
+
+    # Build and start in interactive mode (not detached)
+    docker-compose -f docker-compose.dev.yml up --build
+}
+
+# Execute the requested command
+switch ($command) {
+    "start" { Start-Environment }
+    "dev" { Dev-Environment }
+    "stop" { Stop-Environment }
+    "restart" {
+        Stop-Environment
+        Build-Image
+        Start-Environment
+    }
+    "logs" { Show-Logs }
+    "build" { Build-Image }
+    "shell" { Open-Shell }
+    "migrate" { Run-Migrations }
+    "reset-db" { Reset-Database }
+    "clean" { Clean-Environment }
+    default { Show-Help }
+}

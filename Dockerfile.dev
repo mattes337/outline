@@ -1,0 +1,58 @@
+FROM node:20
+
+LABEL description="Development image for Outline"
+
+# Set working directory
+WORKDIR /opt/outline
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y cmake wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV PORT=3000
+ENV DEBUG=http
+ENV LOG_LEVEL=debug
+ENV URL=http://localhost:3000
+ENV DATABASE_URL=postgres://user:pass@postgres:5432/outline
+ENV REDIS_URL=redis://redis:6379
+ENV FILE_STORAGE=local
+ENV FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
+ENV DEVELOPMENT_UNSAFE_INLINE_CSP=true
+
+# Create data directory with appropriate permissions
+RUN mkdir -p /var/lib/outline/data && \
+    chmod 777 /var/lib/outline/data
+
+# Copy package.json and yarn.lock
+COPY package.json yarn.lock ./
+COPY patches ./patches
+
+# Install dependencies with development packages
+# We'll use a volume for node_modules in docker-compose.dev.yml
+# This is just for the initial build
+RUN yarn install --frozen-lockfile --network-timeout 1000000 && \
+    yarn cache clean
+
+# Expose ports
+# - 3000: Main application
+# - 3001: Vite dev server
+# - 9229: Node.js debugging
+EXPOSE 3000 3001 9229
+
+# Set up volumes in docker-compose.yml:
+# - .:/opt/outline - for source code
+# - outline-node-modules:/opt/outline/node_modules - for node_modules
+# - outline-data:/var/lib/outline/data - for data
+
+# Copy start script
+COPY start.sh /opt/outline/start.sh
+
+# Make start script executable
+RUN chmod +x /opt/outline/start.sh
+
+# Command to run development server with all services and debugging enabled
+CMD ["/opt/outline/start.sh"]

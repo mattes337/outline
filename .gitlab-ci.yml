@@ -1,0 +1,99 @@
+# GitLab CI/CD configuration for building and pushing Outline Docker images
+# This pipeline builds both the base and final Docker images and pushes them to the registry
+
+stages:
+  - build
+  - push
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: tcp://docker:2375
+  REGISTRY: registry.drydev.de
+  REGISTRY_PATH: thirdparty/outline
+  BASE_IMAGE_NAME: ${REGISTRY}/${REGISTRY_PATH}-base
+  IMAGE_NAME: ${REGISTRY}/${REGISTRY_PATH}
+
+# Build the base image
+build-base:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
+  script:
+    - echo "Building base image..."
+    - docker build -t ${BASE_IMAGE_NAME}:${CI_COMMIT_REF_SLUG} -f Dockerfile.base .
+    - docker tag ${BASE_IMAGE_NAME}:${CI_COMMIT_REF_SLUG} ${BASE_IMAGE_NAME}:latest
+  tags:
+    - docker
+
+# Build the main image using the base image
+build-main:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
+  script:
+    - echo "Building main image..."
+    - docker build 
+      --build-arg BASE_IMAGE=${BASE_IMAGE_NAME}:${CI_COMMIT_REF_SLUG}
+      -t ${IMAGE_NAME}:${CI_COMMIT_REF_SLUG}
+      -f Dockerfile .
+    - docker tag ${IMAGE_NAME}:${CI_COMMIT_REF_SLUG} ${IMAGE_NAME}:latest
+  tags:
+    - docker
+  needs:
+    - build-base
+
+# Push the base image to the registry
+push-base:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
+  script:
+    - echo "Pushing base image to registry..."
+    - docker push ${BASE_IMAGE_NAME}:${CI_COMMIT_REF_SLUG}
+    - docker push ${BASE_IMAGE_NAME}:latest
+  tags:
+    - docker
+  needs:
+    - build-base
+  only:
+    - main
+    - tags
+    - /^v\d+\.\d+\.\d+$/
+
+# Push the main image to the registry
+push-main:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
+  script:
+    - echo "Pushing main image to registry..."
+    - docker push ${IMAGE_NAME}:${CI_COMMIT_REF_SLUG}
+    - docker push ${IMAGE_NAME}:latest
+    # If this is a tag, also tag it with the version number
+    - |
+      if [[ $CI_COMMIT_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        VERSION=${CI_COMMIT_REF_NAME#v}
+        docker tag ${IMAGE_NAME}:${CI_COMMIT_REF_SLUG} ${IMAGE_NAME}:${VERSION}
+        docker push ${IMAGE_NAME}:${VERSION}
+      fi
+  tags:
+    - docker
+  needs:
+    - build-main
+  only:
+    - main
+    - tags
+    - /^v\d+\.\d+\.\d+$/
