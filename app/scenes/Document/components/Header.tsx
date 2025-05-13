@@ -6,6 +6,7 @@ import {
   MoonIcon,
   MoreIcon,
   SunIcon,
+  AlertTriangleIcon,
 } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -153,15 +154,21 @@ function DocumentHeader({
   const editAction = (
     <Action>
       <Tooltip
-        content={t("Edit {{noun}}", {
-          noun: document.noun,
-        })}
+        content={
+          document.aiProgressInfo
+            ? t("AI is currently editing: {{progressInfo}}", {
+                progressInfo: document.aiProgressInfo,
+              })
+            : t("Edit {{noun}}", {
+                noun: document.noun,
+              })
+        }
         shortcut="e"
         placement="bottom"
       >
         <Button
           as={Link}
-          icon={<EditIcon />}
+          icon={document.aiProgressInfo ? <AlertTriangleIcon color="warning" /> : <EditIcon />}
           to={{
             pathname: documentEditPath(document),
             state: { sidebarContext },

@@ -14,6 +14,7 @@ import {
 } from "@shared/types";
 import {
   WebsocketDocumentUpdateEvent,
+  WebsocketDocumentProgressEvent,
 } from "~/types";
 import RootStore from "~/stores/RootStore";
 import Collection from "~/models/Collection";
@@ -259,6 +260,27 @@ class WebsocketProvider extends React.Component<Props> {
               // In view mode: automatically refresh the document content
               document?.fetch({ force: true });
             }
+          }
+        }
+      })
+    );
+
+    this.socket.on(
+      "documents.progress",
+      action((event: WebsocketDocumentProgressEvent) => {
+        const { documentId, progressInfo } = event;
+        const document = documents.get(documentId);
+
+        if (document) {
+          // Update document with progress info
+          document.aiProgressInfo = progressInfo;
+
+          // If the document is currently open, show a toast notification
+          if (this.props.ui.activeDocumentId === documentId) {
+            // Use the global toast function from sonner library
+            toast.info(`AI Agent: ${progressInfo}`, {
+              duration: 5000,
+            });
           }
         }
       })

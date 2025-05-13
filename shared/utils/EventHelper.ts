@@ -16,6 +16,7 @@ export class EventHelper {
     "documents.restore",
     "documents.add_user",
     "documents.remove_user",
+    "documents.progress",
     "revisions.create",
     "users.create",
     "users.demote",

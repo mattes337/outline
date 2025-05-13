@@ -561,6 +561,10 @@ class Document extends ArchivableModel<
   @Column(DataType.JSONB)
   sourceMetadata: SourceMetadata | null;
 
+  /** Virtual field for AI progress info (not stored in the database) */
+  @Column(DataType.VIRTUAL)
+  aiProgressInfo: string | null;
+
   @BelongsTo(() => Document, "parentDocumentId")
   parentDocument: Document | null;
 

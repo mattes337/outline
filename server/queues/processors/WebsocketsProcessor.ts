@@ -574,6 +574,23 @@ export default class WebsocketsProcessor {
         });
       }
 
+      case "documents.progress": {
+        const document = await Document.findByPk(event.documentId, {
+          paranoid: false,
+        });
+        if (!document) {
+          return;
+        }
+
+        const channels = await this.getDocumentEventChannels(event, document);
+
+        return socketio.to(channels).emit(event.name, {
+          documentId: document.id,
+          title: document.title,
+          progressInfo: event.data.progressInfo,
+        });
+      }
+
       case "notifications.create":
       case "notifications.update": {
         const notification = await Notification.findByPk(event.modelId);

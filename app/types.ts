@@ -202,6 +202,12 @@ export type WebsocketDocumentUpdateEvent = PartialExcept<Document, "id" | "title
   };
 };
 
+export type WebsocketDocumentProgressEvent = {
+  documentId: string;
+  title: string;
+  progressInfo: string;
+};
+
 export type WebsocketEvent =
   | PartialExcept<Pin, "id">
   | PartialExcept<Star, "id">
@@ -211,7 +217,8 @@ export type WebsocketEvent =
   | WebsocketEntityDeletedEvent
   | WebsocketEntitiesEvent
   | WebsocketCommentReactionEvent
-  | WebsocketDocumentUpdateEvent;
+  | WebsocketDocumentUpdateEvent
+  | WebsocketDocumentProgressEvent;
 
 type CursorPosition = {
   type: {

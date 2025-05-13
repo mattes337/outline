@@ -78,6 +78,10 @@ export default class Document extends ArchivableModel implements Searchable {
     this._lastApiUpdate = value;
   }
 
+  // Virtual property to track AI progress (not stored in database)
+  @observable
+  aiProgressInfo: string | null = null;
+
   store: DocumentsStore;
 
   @observable.shallow

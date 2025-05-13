@@ -393,6 +393,15 @@ export const DocumentsUsersSchema = BaseSchema.extend({
 
 export type DocumentsUsersReq = z.infer<typeof DocumentsUsersSchema>;
 
+export const DocumentsProgressSchema = BaseSchema.extend({
+  body: BaseIdSchema.extend({
+    /** Progress information to be shown to users */
+    progressInfo: z.string().max(200),
+  }),
+});
+
+export type DocumentsProgressReq = z.infer<typeof DocumentsProgressSchema>;
+
 export const DocumentsAddUserSchema = BaseSchema.extend({
   body: BaseIdSchema.extend({
     /** Id of the user who is to be added */

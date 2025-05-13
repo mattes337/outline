@@ -189,12 +189,14 @@ export type DocumentEvent = BaseEvent<Document> &
           | "documents.delete"
           | "documents.permanent_delete"
           | "documents.archive"
-          | "documents.restore";
+          | "documents.restore"
+          | "documents.progress";
         documentId: string;
         collectionId: string;
         data: {
           title: string;
           source?: "import";
+          progressInfo?: string;
         };
       }
     | {

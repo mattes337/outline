@@ -694,6 +694,40 @@ router.post(
 );
 
 router.post(
+  "documents.progress",
+  auth(),
+  validate(T.DocumentsProgressSchema),
+  async (ctx: APIContext<T.DocumentsProgressReq>) => {
+    const { id, progressInfo } = ctx.input.body;
+    const { user } = ctx.state.auth;
+
+    const document = await Document.findByPk(id, {
+      userId: user.id,
+    });
+    authorize(user, "read", document);
+
+    // Create an event to broadcast the progress info
+    await Event.create({
+      name: "documents.progress",
+      documentId: document.id,
+      collectionId: document.collectionId,
+      teamId: document.teamId,
+      actorId: user.id,
+      data: {
+        progressInfo,
+        documentId: document.id,
+        title: document.title,
+      },
+      ip: ctx.request.ip,
+    });
+
+    ctx.body = {
+      success: true,
+    };
+  }
+);
+
+router.post(
   "documents.export",
   rateLimiter(RateLimiterStrategy.TwentyFivePerMinute),
   auth({ optional: true }),
