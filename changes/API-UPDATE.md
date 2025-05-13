@@ -51,20 +51,20 @@ Modify the `documentUpdater` command to update the YJS state when a document is 
 // In server/commands/documentUpdater.ts
 if (text !== undefined) {
   document = DocumentHelper.applyMarkdownToDocument(document, text, append);
-  
+
   // Also update the collaborative state
   if (document.state) {
     const ydoc = new Y.Doc();
     Y.applyUpdate(ydoc, document.state);
-    
+
     // Apply the new content to the YJS document
     const type = ydoc.get("default", Y.XmlFragment) as Y.XmlFragment;
     const doc = parser.parse(document.text);
-    
+
     // Clear existing content and apply new content
     type.delete(0, type.length);
     updateYFragment(type.doc, type, doc, new Map());
-    
+
     // Update the state
     document.state = Buffer.from(Y.encodeStateAsUpdate(ydoc));
   }
@@ -127,9 +127,26 @@ provider.on("update", (update) => {
 });
 ```
 
-### 5. Client-side: Update WebsocketProvider to Handle API Updates
+### 5. Client-side: Update Document Model and WebsocketProvider
 
-Enhance the WebsocketProvider to properly handle API updates:
+First, add a virtual property to the Document model to track API updates without schema changes:
+
+```typescript
+// In app/models/Document.ts
+// Virtual property to track API updates (not stored in database)
+_lastApiUpdate: string | null = null;
+
+// Virtual getter/setter for lastApiUpdate
+get lastApiUpdate(): string | null {
+  return this._lastApiUpdate;
+}
+
+set lastApiUpdate(value: string | null) {
+  this._lastApiUpdate = value;
+}
+```
+
+Then enhance the WebsocketProvider to properly handle API updates:
 
 ```typescript
 // In app/components/WebsocketProvider.tsx
@@ -160,8 +177,8 @@ this.socket.on(
             description: t("Your changes may conflict with the API changes."),
             icon: <AlertTriangleIcon />,
           });
-          
-          // Set a flag on the document to show a warning icon
+
+          // Set a flag on the document to show a warning icon (using virtual property)
           document.lastApiUpdate = new Date().toISOString();
         } else {
           // In view mode: automatically refresh the document content
@@ -181,7 +198,9 @@ this.socket.on(
 
 3. **Race Conditions**: Care must be taken to handle potential race conditions between collaborative edits and API updates.
 
-4. **Custom Header Option**: As suggested, we could add support for a custom header in API calls to control behavior:
+4. **No Schema Changes**: The implementation uses virtual properties in the client-side Document model to track API updates, avoiding any database schema changes. This makes the solution easier to deploy and maintain.
+
+5. **Custom Header Option**: As suggested, we could add support for a custom header in API calls to control behavior:
    ```
    X-Force-Update: true
    ```

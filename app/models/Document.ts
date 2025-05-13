@@ -66,6 +66,18 @@ export default class Document extends ArchivableModel implements Searchable {
   @observable
   lastViewedAt: string | undefined;
 
+  // Virtual property to track API updates (not stored in database)
+  _lastApiUpdate: string | null = null;
+
+  // Virtual getter/setter for lastApiUpdate
+  get lastApiUpdate(): string | null {
+    return this._lastApiUpdate;
+  }
+
+  set lastApiUpdate(value: string | null) {
+    this._lastApiUpdate = value;
+  }
+
   store: DocumentsStore;
 
   @observable.shallow

@@ -196,6 +196,12 @@ export type WebsocketCommentReactionEvent = {
   user: User;
 };
 
+export type WebsocketDocumentUpdateEvent = PartialExcept<Document, "id" | "title" | "url"> & {
+  data?: {
+    isApiUpdate?: boolean;
+  };
+};
+
 export type WebsocketEvent =
   | PartialExcept<Pin, "id">
   | PartialExcept<Star, "id">
@@ -204,7 +210,8 @@ export type WebsocketEvent =
   | WebsocketCollectionUpdateIndexEvent
   | WebsocketEntityDeletedEvent
   | WebsocketEntitiesEvent
-  | WebsocketCommentReactionEvent;
+  | WebsocketCommentReactionEvent
+  | WebsocketDocumentUpdateEvent;
 
 type CursorPosition = {
   type: {

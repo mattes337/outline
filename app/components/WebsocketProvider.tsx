@@ -6,11 +6,15 @@ import * as React from "react";
 import { withTranslation, WithTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
+import { AlertTriangleIcon } from "outline-icons";
 import {
   FileOperationState,
   FileOperationType,
   ImportState,
 } from "@shared/types";
+import {
+  WebsocketDocumentUpdateEvent,
+} from "~/types";
 import RootStore from "~/stores/RootStore";
 import Collection from "~/models/Collection";
 import Comment from "~/models/Comment";
@@ -221,12 +225,41 @@ class WebsocketProvider extends React.Component<Props> {
 
     this.socket.on(
       "documents.update",
-      action((event: PartialExcept<Document, "id" | "title" | "url">) => {
+      action((event: WebsocketDocumentUpdateEvent) => {
         documents.add(event);
 
         if (event.collectionId) {
           const collection = collections.get(event.collectionId);
           collection?.updateDocument(event);
+        }
+
+        // Handle API updates
+        if (event.id && event.data?.isApiUpdate) {
+          const documentId = event.id;
+          const document = documents.get(documentId);
+
+          // Check if this document is currently active
+          if (this.props.ui.activeDocumentId === documentId) {
+            const editor = document?.editor;
+            const isEditing = editor && !editor.props.readOnly;
+
+            if (isEditing) {
+              // In edit mode: show a warning
+              toast.warning(t("This document has been updated via API"), {
+                duration: 6000,
+                description: t("Your changes may conflict with the API changes."),
+                icon: <AlertTriangleIcon />,
+              });
+
+              // Set a flag on the document to show a warning icon
+              if (document) {
+                document.lastApiUpdate = new Date().toISOString();
+              }
+            } else {
+              // In view mode: automatically refresh the document content
+              document?.fetch({ force: true });
+            }
+          }
         }
       })
     );

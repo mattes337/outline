@@ -1,6 +1,10 @@
+import * as Y from "yjs";
+import { updateYFragment } from "y-prosemirror";
 import { Event, Document, User } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
+import { parser } from "@server/editor";
 import { APIContext } from "@server/types";
+import notifyCollaborationService from "./notifyCollaborationService";
 
 type Props = {
   /** The user updating the document */
@@ -86,6 +90,28 @@ export default async function documentUpdater(
   }
   if (text !== undefined) {
     document = DocumentHelper.applyMarkdownToDocument(document, text, append);
+
+    // Also update the collaborative state if it exists
+    if (document.state) {
+      const ydoc = new Y.Doc();
+      Y.applyUpdate(ydoc, document.state);
+
+      // Apply the new content to the YJS document
+      const type = ydoc.get("default", Y.XmlFragment) as Y.XmlFragment;
+      const doc = parser.parse(document.text);
+
+      if (!type.doc) {
+        throw new Error("type.doc not found");
+      }
+
+      // Clear existing content and apply new content
+      type.delete(0, type.length);
+      updateYFragment(type.doc, type, doc, new Map());
+
+      // Update the state
+      document.state = Buffer.from(Y.encodeStateAsUpdate(ydoc));
+      document.changed("state", true);
+    }
   }
 
   const changed = document.changed();
@@ -97,6 +123,7 @@ export default async function documentUpdater(
     data: {
       done,
       title: document.title,
+      isApiUpdate: true,
     },
   };
 
@@ -116,6 +143,14 @@ export default async function documentUpdater(
     await document.save({ transaction });
 
     await Event.createFromContext(ctx, event);
+
+    // Notify collaboration service about the API update if text was changed
+    if (text !== undefined && document.state) {
+      await notifyCollaborationService({
+        documentId: document.id,
+        force: true,
+      });
+    }
   } else if (done) {
     await Event.schedule({
       ...event,

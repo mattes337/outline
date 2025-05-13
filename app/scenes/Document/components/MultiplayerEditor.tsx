@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import { toast } from "sonner";
+import { AlertTriangleIcon } from "outline-icons";
 import { IndexeddbPersistence } from "y-indexeddb";
 import * as Y from "yjs";
 import {
@@ -144,6 +145,27 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
     provider.on("synced", () => {
       presence.touch(documentId, currentUser.id, false);
       setRemoteSynced(true);
+    });
+
+    provider.on("update", (update: any) => {
+      // Check if this update is a forced update from the server (API update)
+      if (update.isForced) {
+        const document = props.document;
+        const isEditing = !props.readOnly;
+
+        // Force reload the document content
+        if (!isEditing) {
+          // In view mode, silently refresh
+          document?.fetch({ force: true });
+        } else {
+          // In edit mode, show warning
+          toast.warning(t("This document has been updated via API"), {
+            duration: 6000,
+            description: t("Your changes may conflict with the API changes."),
+            icon: <AlertTriangleIcon />,
+          });
+        }
+      }
     });
 
     provider.on("close", (ev: MessageEvent) => {
