@@ -44,5 +44,13 @@ echo "NODE_ENV: $NODE_ENV"
 echo "URL: $URL"
 echo "DEBUG: $DEBUG"
 
+# Set additional environment variables for better hot reloading
+export VITE_ENABLE_HMR=true
+export CHOKIDAR_USEPOLLING=true
+export WATCHPACK_POLLING=true
+export CHOKIDAR_INTERVAL=1000
+export FAST_REFRESH=true
+
 # Use nodemon directly with more verbose logging
+echo "Starting development server with yarn dev:watch..."
 yarn dev:watch

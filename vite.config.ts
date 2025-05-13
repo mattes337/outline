@@ -40,12 +40,13 @@ export default () =>
         // Enable verbose HMR logging
         logger: console,
         protocol: 'ws',
-        host: 'localhost',
+        host: '0.0.0.0',
         port: 3001,
         overlay: true,
-        clientPort: 3001,
+        // Allow connections from any host
+        clientPort: environment.NODE_ENV === "development" ? undefined : 3001,
         // Add timeout to help with Docker networking delays
-        timeout: 5000,
+        timeout: 10000,
       },
       watch: {
         // Use polling in Docker environment for more reliable file watching

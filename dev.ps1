@@ -16,6 +16,7 @@ function Show-Help {
     Write-Host "  stop        - Stop the development environment"
     Write-Host "  restart     - Restart the development environment"
     Write-Host "  logs        - Show logs from all services"
+    Write-Host "  status      - Check the status of the development environment"
     Write-Host "  build       - Rebuild the Outline development image"
     Write-Host "  shell       - Open a shell in the Outline container"
     Write-Host "  migrate     - Run database migrations"
@@ -99,9 +100,24 @@ function Debug-Environment {
     $env:VITE_ENABLE_HMR="true"
     $env:CHOKIDAR_USEPOLLING="true"
     $env:WATCHPACK_POLLING="true"
+    $env:CHOKIDAR_INTERVAL="1000"
+    $env:FAST_REFRESH="true"
+    $env:VITE_HMR_HOST="0.0.0.0"
+    $env:VITE_HMR_PORT="3001"
+    $env:VITE_HMR_PROTOCOL="ws"
 
     # Build and start in interactive mode with verbose output
     docker-compose -f docker-compose.dev.yml up --build
+}
+
+function Check-Status {
+    Write-Host "Checking Outline development environment status..." -ForegroundColor Green
+
+    # Make the check-dev-status.sh script executable
+    docker-compose -f docker-compose.dev.yml exec outline chmod +x /opt/outline/check-dev-status.sh
+
+    # Run the status check script
+    docker-compose -f docker-compose.dev.yml exec outline /opt/outline/check-dev-status.sh
 }
 
 # Execute the requested command
@@ -116,6 +132,7 @@ switch ($command) {
         Start-Environment
     }
     "logs" { Show-Logs }
+    "status" { Check-Status }
     "build" { Build-Image }
     "shell" { Open-Shell }
     "migrate" { Run-Migrations }
