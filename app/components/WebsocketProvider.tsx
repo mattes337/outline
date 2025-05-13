@@ -6,7 +6,39 @@ import * as React from "react";
 import { withTranslation, WithTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
-import { AlertTriangleIcon } from "outline-icons";
+// Custom warning triangle icon
+const AlertTriangleIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ color: "orange" }}
+  >
+    <path
+      d="M12 9V13"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 17.0195V17"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M10.2427 3.75736C11.0243 2.97579 12.2757 2.97579 13.0573 3.75736L20.2427 10.9427C21.0243 11.7243 21.0243 12.9757 20.2427 13.7573L13.0573 20.9427C12.2757 21.7242 11.0243 21.7242 10.2427 20.9427L3.05736 13.7573C2.27579 12.9757 2.27579 11.7243 3.05736 10.9427L10.2427 3.75736Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 import {
   FileOperationState,
   FileOperationType,
@@ -234,31 +266,93 @@ class WebsocketProvider extends React.Component<Props> {
           collection?.updateDocument(event);
         }
 
-        // Handle API updates
-        if (event.id && event.data?.isApiUpdate) {
+        // Handle document updates (both API and user-originated)
+        if (event.id) {
           const documentId = event.id;
           const document = documents.get(documentId);
 
-          // Check if this document is currently active
-          if (this.props.ui.activeDocumentId === documentId) {
-            const editor = document?.editor;
-            const isEditing = editor && !editor.props.readOnly;
+          if (document) {
+            // Reset the progress state when an update is received
+            document.aiProgressInfo = null;
 
-            if (isEditing) {
-              // In edit mode: show a warning
-              toast.warning(t("This document has been updated via API"), {
-                duration: 6000,
-                description: t("Your changes may conflict with the API changes."),
-                icon: <AlertTriangleIcon />,
+            // If this is not an API update, reset the lastApiUpdate flag
+            if (!event.data?.isApiUpdate) {
+              document.lastApiUpdate = null;
+            }
+
+            // Check if this document is currently active
+            if (this.props.ui.activeDocumentId === documentId) {
+              console.log("[TRACE] Received update for document", {
+                documentId,
+                title: document?.title,
+                isApiUpdate: event.data?.isApiUpdate || false,
               });
 
-              // Set a flag on the document to show a warning icon
-              if (document) {
+              // Get the current document from the editor context to check if it's in edit mode
+              const editor = document?.editor;
+              const isEditing = editor && !editor.props.readOnly;
+
+              if (isEditing) {
+                console.log(
+                  "[TRACE] Document is in edit mode, showing warning",
+                  {
+                    documentId,
+                    title: document?.title,
+                    isEditing: true,
+                  }
+                );
+
+                // In edit mode: show a toast notification with a warning
+                toast.warning(
+                  this.props.t(
+                    event.data?.isApiUpdate
+                      ? "This document has been updated by AI"
+                      : "This document has been updated"
+                  ),
+                  {
+                    duration: 6000,
+                    description: this.props.t(
+                      event.data?.isApiUpdate
+                        ? "Your changes may conflict with the AI's changes."
+                        : "Your changes may conflict with the recent updates."
+                    ),
+                    icon: <AlertTriangleIcon />,
+                  }
+                );
+
+                // Set a flag on the document to show a warning icon in the editor
                 document.lastApiUpdate = new Date().toISOString();
+              } else {
+                console.log(
+                  "[TRACE] Document is in view mode, auto-refreshing",
+                  {
+                    documentId,
+                    title: document?.title,
+                    isEditing: false,
+                  }
+                );
+
+                // In view mode: automatically refresh the document content
+                toast.info(
+                  this.props.t(
+                    event.data?.isApiUpdate
+                      ? "Document updated by AI"
+                      : "Document updated"
+                  ),
+                  {
+                    duration: 3000,
+                  }
+                );
+
+                console.log("[TRACE] Fetching updated document content", {
+                  documentId,
+                  force: true,
+                });
+
+                // Force reload the document content without page refresh
+                // This will reset the YJS state and trigger a complete refresh
+                document.fetch({ force: true });
               }
-            } else {
-              // In view mode: automatically refresh the document content
-              document?.fetch({ force: true });
             }
           }
         }

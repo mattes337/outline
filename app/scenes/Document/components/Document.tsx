@@ -64,6 +64,7 @@ import Notices from "./Notices";
 import PublicReferences from "./PublicReferences";
 import References from "./References";
 import RevisionViewer from "./RevisionViewer";
+import UpdatedDocumentBanner from "./UpdatedDocumentBanner";
 
 const AUTOSAVE_DELAY = 3000;
 
@@ -497,6 +498,7 @@ class DocumentScene extends React.Component<Props> {
           <PageTitle title={title} favicon={favicon} />
           {(this.isUploading || this.isSaving) && <LoadingIndicator />}
           <Container column>
+            <UpdatedDocumentBanner />
             {!readOnly && (
               <Prompt
                 when={this.isUploading && !this.isEditorDirty}

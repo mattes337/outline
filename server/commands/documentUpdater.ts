@@ -142,7 +142,14 @@ export default async function documentUpdater(
     document.updatedBy = user;
     await document.save({ transaction });
 
-    await Event.createFromContext(ctx, event);
+    // Add isApiUpdate flag to the event data
+    await Event.createFromContext(ctx, {
+      ...event,
+      data: {
+        ...event.data,
+        isApiUpdate: true,
+      },
+    });
 
     // Notify collaboration service about the API update if text was changed
     if (text !== undefined && document.state) {

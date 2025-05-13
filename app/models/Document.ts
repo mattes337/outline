@@ -23,7 +23,7 @@ import { isRTL } from "@shared/utils/rtl";
 import slugify from "@shared/utils/slugify";
 import DocumentsStore from "~/stores/DocumentsStore";
 import User from "~/models/User";
-import type { Properties } from "~/types";
+import type { FetchOptions, Properties } from "~/types";
 import { client } from "~/utils/ApiClient";
 import { settingsPath } from "~/utils/routeHelpers";
 import Collection from "./Collection";
@@ -61,10 +61,16 @@ export default class Document extends ArchivableModel implements Searchable {
   isSaving = false;
 
   @observable
+  isFetching = false;
+
+  @observable
   embedsDisabled: boolean;
 
   @observable
   lastViewedAt: string | undefined;
+
+  // Reference to the editor component (set by DocumentContext)
+  editor: any;
 
   // Virtual property to track API updates (not stored in database)
   _lastApiUpdate: string | null = null;
@@ -297,6 +303,11 @@ export default class Document extends ArchivableModel implements Searchable {
   }
 
   @computed
+  get hasRecentApiUpdate(): boolean {
+    return !!this.lastApiUpdate;
+  }
+
+  @computed
   get isBadgedNew(): boolean {
     return (
       !this.lastViewedAt &&
@@ -491,6 +502,47 @@ export default class Document extends ArchivableModel implements Searchable {
   @action
   disableEmbeds = () => {
     this.embedsDisabled = true;
+  };
+
+  fetch = async (options: FetchOptions = {}): Promise<Document> => {
+    try {
+      this.isFetching = true;
+
+      // If force is true, we need to ensure we get the latest state
+      const fetchOptions = options.force
+        ? { ...options, includeState: true }
+        : options;
+
+      const model = await this.store.fetch(this.id, fetchOptions);
+
+      // Reset the lastApiUpdate flag when a document is fetched with force=true
+      if (options.force) {
+        this.lastApiUpdate = null;
+
+        // If this document has an editor instance, reset it to force a refresh
+        if (this.editor && !this.editor.props.readOnly) {
+          console.log("[TRACE] Document in edit mode, not resetting editor", {
+            documentId: this.id,
+            title: this.title,
+          });
+          // In edit mode, we don't reset the editor to avoid losing user changes
+          // The warning will be shown by the WebsocketProvider
+        } else if (this.editor) {
+          console.log("[TRACE] Resetting editor for document refresh", {
+            documentId: this.id,
+            title: this.title,
+          });
+
+          // For simplicity, we'll just reload the page to get the latest content
+          // This avoids issues with the YJS state and ensures we get the latest content
+          window.location.reload();
+        }
+      }
+
+      return model;
+    } finally {
+      this.isFetching = false;
+    }
   };
 
   @action

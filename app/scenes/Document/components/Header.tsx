@@ -6,6 +6,7 @@ import {
   MoonIcon,
   MoreIcon,
   SunIcon,
+  AlertTriangleIcon,
 } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -158,6 +159,8 @@ function DocumentHeader({
             ? t("AI is currently editing: {{progressInfo}}", {
                 progressInfo: document.aiProgressInfo,
               })
+            : document.lastApiUpdate
+            ? t("This document has been updated by AI")
             : t("Edit {{noun}}", {
                 noun: document.noun,
               })
@@ -167,7 +170,13 @@ function DocumentHeader({
       >
         <Button
           as={Link}
-          icon={document.aiProgressInfo ? <CustomWarningIcon /> : <EditIcon />}
+          icon={
+            document.aiProgressInfo || document.lastApiUpdate ? (
+              <CustomWarningIcon />
+            ) : (
+              <EditIcon />
+            )
+          }
           to={{
             pathname: documentEditPath(document),
             state: { sidebarContext },

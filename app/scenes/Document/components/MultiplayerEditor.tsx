@@ -25,9 +25,18 @@ import useStores from "~/hooks/useStores";
 import { AwarenessChangeEvent } from "~/types";
 import Logger from "~/utils/Logger";
 import { homePath } from "~/utils/routeHelpers";
+import Document from "~/models/Document";
+
+// Extend HocuspocusProvider with our custom method
+declare module "@hocuspocus/provider" {
+  interface HocuspocusProvider {
+    resetDocument?: (newContent: string) => boolean;
+  }
+}
 
 type Props = EditorProps & {
   id: string;
+  document?: Document;
   onSynced?: () => Promise<void>;
 };
 
@@ -147,6 +156,27 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       setRemoteSynced(true);
     });
 
+    // Add a method to reset the YJS document with new content
+    provider.resetDocument = (_newContent: string) => {
+      console.log("[TRACE] Resetting YJS document with new content", {
+        documentId,
+      });
+
+      try {
+        // Instead of trying to parse the content ourselves, we'll force a reload
+        // of the document from the server, which will include the updated state
+        console.log("[TRACE] Forcing page reload to refresh document content");
+
+        // Force a page reload to get the latest content
+        window.location.reload();
+
+        return true;
+      } catch (error) {
+        console.error("[ERROR] Failed to reset YJS document", error);
+        return false;
+      }
+    };
+
     provider.on("update", (update: any) => {
       // Check if this update is a forced update from the server (API update)
       if (update.isForced) {
@@ -155,8 +185,22 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
 
         // Force reload the document content
         if (!isEditing) {
-          // In view mode, silently refresh
-          document?.fetch({ force: true });
+          console.log(
+            "[TRACE] Document updated via API, refreshing in view mode",
+            {
+              documentId,
+              title: document?.title,
+            }
+          );
+
+          // In view mode, force a page reload to get the latest content
+          console.log("[TRACE] Document updated via API, forcing page reload", {
+            documentId,
+            title: document?.title,
+          });
+
+          // Force a page reload to get the latest content
+          window.location.reload();
         } else {
           // In edit mode, show warning
           toast.warning(t("This document has been updated via API"), {
