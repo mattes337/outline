@@ -58,3 +58,4 @@ volumes:
   outline-redis:
   outline-node-modules:
   outline-data:
+
