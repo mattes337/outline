@@ -5,6 +5,7 @@ This document outlines the implementation plan for notifying users when a docume
 ## Problem Statement
 
 When a user has a document open and that document is updated via API (not by another user), the user should:
+
 - Be notified about the update
 - In view mode: reload the document automatically without reloading the window to avoid flickering
 - In edit mode: show a warning icon left of the "Done editing" button with a tooltip saying that the document has been changed by AI
@@ -30,8 +31,11 @@ Ensure the WebSocket event includes information about the update source.
 ### 3. Handle All Document Updates on the Client
 
 Update the WebSocket event handler to process all document updates consistently:
+
 - In view mode: automatically refresh the document content without page reload for both API and user-originated updates
 - In edit mode: display a warning icon with tooltip about document changes
+- Reset the "progress" state in the Header component when an update is received
+- Reset the yjs collaborative binary state to ensure all clients receive the update
 
 ### 4. Update API Routes to Set Source Header
 
@@ -44,12 +48,14 @@ Add appropriate type definitions to support the API update flag.
 ### 6. Add Warning Icon for Progress Notifications
 
 Modify the WebsocketProvider to update the document's state when progress notifications are received:
+
 - Set a flag on the document to indicate that an AI operation is in progress
 - Update the Edit button UI to show a warning icon when this flag is set
 
 ### 7. Implement Document Update Banner
 
 Add a new banner component that appears at the top of the document when in edit mode and a new version is available:
+
 - Use the ObservingBanner component as a reference for implementation
 - Include a button to revert local changes and load the newest version
 - Position the banner at the top of the document editor
@@ -63,9 +69,11 @@ Add the necessary translation keys to support multiple languages.
 ### Issue 1: Document Refresh Not Working for User-Originated Updates
 
 #### Problem
+
 Currently, the document refresh functionality only works for API-originated updates (`event.isApiUpdate === true`). When a user-originated update is received, the document content is not automatically refreshed, even if the current user is not the initiator of the change.
 
 #### Solution
+
 Modify the WebsocketProvider component to handle all document updates consistently, regardless of the source:
 
 ```typescript
@@ -134,9 +142,7 @@ this.socket.on(
           // In view mode: automatically refresh the document content
           toast.info(
             this.props.t(
-              event.isApiUpdate
-                ? "Document updated by AI"
-                : "Document updated"
+              event.isApiUpdate ? "Document updated by AI" : "Document updated"
             ),
             {
               duration: 3000,
@@ -160,36 +166,43 @@ this.socket.on(
 ### Issue 2: Warning Icon Not Shown for Progress Notifications
 
 #### Problem
+
 When a "Showing progress notification for active document" event is received, the toast notification is shown, but the "Edit" button is not updated to display a warning icon.
 
 #### Solution
+
 Modify the WebsocketProvider to update the document's state when progress notifications are received:
 
 ```typescript
 // In app/components/WebsocketProvider.tsx
 this.socket.on(
   "documents.progress",
-  action((event: { documentId: string; title: string; progressInfo: string }) => {
-    const { documentId, progressInfo } = event;
-    const document = documents.get(documentId);
+  action(
+    (event: { documentId: string; title: string; progressInfo: string }) => {
+      const { documentId, progressInfo } = event;
+      const document = documents.get(documentId);
 
-    if (document) {
-      // Update document with progress info
-      document.aiProgressInfo = progressInfo;
+      if (document) {
+        // Update document with progress info
+        document.aiProgressInfo = progressInfo;
 
-      // If the document is currently active, show a toast notification
-      if (this.props.ui.activeDocumentId === documentId) {
-        console.log("[TRACE] Showing progress notification for active document", {
-          documentId,
-          progressInfo,
-        });
+        // If the document is currently active, show a toast notification
+        if (this.props.ui.activeDocumentId === documentId) {
+          console.log(
+            "[TRACE] Showing progress notification for active document",
+            {
+              documentId,
+              progressInfo,
+            }
+          );
 
-        toast.info(`AI Agent: ${progressInfo}`, {
-          duration: 5000,
-        });
+          toast.info(`AI Agent: ${progressInfo}`, {
+            duration: 5000,
+          });
+        }
       }
     }
-  })
+  )
 );
 ```
 
@@ -214,7 +227,13 @@ const editAction = (
     >
       <Button
         as={Link}
-        icon={document.aiProgressInfo ? <AlertTriangleIcon color="warning" /> : <EditIcon />}
+        icon={
+          document.aiProgressInfo ? (
+            <AlertTriangleIcon color="warning" />
+          ) : (
+            <EditIcon />
+          )
+        }
         to={{
           pathname: documentEditPath(document),
           state: { sidebarContext },
@@ -231,9 +250,11 @@ const editAction = (
 ### Issue 3: No Banner for Updated Documents in Edit Mode
 
 #### Problem
+
 When in edit mode and a document update is received, there should be a banner at the top of the document indicating that a new version is available, with a button to "revert local changes and switch to newest version".
 
 #### Solution
+
 Create a new UpdatedDocumentBanner component similar to the ObservingBanner:
 
 ```typescript
@@ -260,8 +281,11 @@ function UpdatedDocumentBanner() {
   const { t } = useTranslation();
   const { editor } = useDocumentContext();
 
-  const document = ui.activeDocumentId ? documents.get(ui.activeDocumentId) : undefined;
-  const isVisible = document?.hasRecentApiUpdate && editor && !editor.props.readOnly;
+  const document = ui.activeDocumentId
+    ? documents.get(ui.activeDocumentId)
+    : undefined;
+  const isVisible =
+    document?.hasRecentApiUpdate && editor && !editor.props.readOnly;
 
   const handleRevertAndUpdate = React.useCallback(() => {
     if (document) {
@@ -351,6 +375,7 @@ return (
 ## Known Bug and Fix
 
 There is a bug in the WebsocketProvider component that causes the following error:
+
 ```
 [websockets] Received API-originated update for document 855d679c-06c0-4331-a349-708554185d4c undefined
 authenticated.CP6MeiXa.js:11 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'activeDocumentId')
@@ -359,8 +384,107 @@ authenticated.CP6MeiXa.js:11 Uncaught (in promise) TypeError: Cannot read proper
 The error occurs in the WebsocketProvider component when it tries to access this.props.editor.activeDocumentId and this.props.toasts.showToast(), but neither editor nor toasts are properties of the RootStore that's passed to the component via the withStores HOC.
 
 Fix:
+
 - Modify the WebsocketProvider component to use the UI store's activeDocumentId directly instead of trying to access it through a non-existent editor property.
 - Use the global toast function from the sonner library instead of trying to access a non-existent toasts property.
+
+### Issue 4: Reset Progress State When Update is Received
+
+#### Problem
+
+When a document update is received, the "progress" state in the Header component is not reset, which can lead to stale progress information being displayed even after the update is complete.
+
+#### Solution
+
+Modify the WebsocketProvider component to reset the document's progress state when an update is received:
+
+```typescript
+// In app/components/WebsocketProvider.tsx
+this.socket.on(
+  "documents.update",
+  action((event: WebsocketDocumentUpdateEvent) => {
+    documents.add(event);
+
+    if (event.collectionId) {
+      const collection = collections.get(event.collectionId);
+      collection?.updateDocument(event);
+    }
+
+    // Handle document updates
+    if (event.id) {
+      const documentId = event.id;
+      const document = documents.get(documentId);
+
+      if (document) {
+        // Reset the progress state when an update is received
+        document.aiProgressInfo = null;
+
+        // Check if this document is currently active
+        if (this.props.ui.activeDocumentId === documentId) {
+          // Rest of the handler...
+        }
+      }
+    }
+  })
+);
+```
+
+### Issue 5: Reset YJS Collaborative State for All Clients
+
+#### Problem
+
+When a document is updated via API by setting the 'text' property, users who already have the document open don't see the updates. This is because the yjs collaborative state is not reset, and clients continue to use their local binary state.
+
+#### Solution
+
+Modify the document update process on the server to reset the yjs collaborative state when a document is updated via API:
+
+```typescript
+// In server/commands/documentUpdater.ts
+if (text !== undefined) {
+  document = DocumentHelper.applyMarkdownToDocument(document, text, append);
+
+  // Reset the collaborative state
+  const ydoc = new Y.Doc();
+  const type = ydoc.get("default", Y.XmlFragment) as Y.XmlFragment;
+  const doc = parser.parse(document.text);
+
+  if (!type.doc) {
+    throw new Error("type.doc not found");
+  }
+
+  // Clear existing content and apply new content
+  type.delete(0, type.length);
+  updateYFragment(type.doc, type, doc, new Map());
+
+  // Update the state
+  document.state = Buffer.from(Y.encodeStateAsUpdate(ydoc));
+  document.changed("state", true);
+}
+```
+
+Additionally, ensure that when a document is fetched after an update, the client requests the latest state from the server:
+
+```typescript
+// In app/models/Document.ts
+fetch = async (options: FetchOptions = {}): Promise<Document> => {
+  try {
+    this.isFetching = true;
+
+    // If force is true, we need to ensure we get the latest state
+    if (options.force) {
+      // Request the document with state included
+      const params = {
+        id: this.id,
+        shareId: options.shareId,
+        includeState: true,
+      };
+      // Rest of the fetch method...
+    }
+    // ...
+  }
+};
+```
 
 ## Important Note
 
