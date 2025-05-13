@@ -13,7 +13,8 @@ services:
       - postgres
       - redis
     volumes:
-      - .:/opt/outline:cached
+      # Use delegated mode for better performance with hot reload
+      - .:/opt/outline:delegated
       - outline-node-modules:/opt/outline/node_modules
       - outline-data:/var/lib/outline/data
       # Exclude node_modules from the bind mount to improve performance
@@ -25,11 +26,14 @@ services:
       - REDIS_URL=redis://redis:6379
       - FILE_STORAGE=local
       - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
-      - DEBUG=http
+      - DEBUG=vite:*,nodemon:*,http,express:*,socket.io:*
       - LOG_LEVEL=debug
       - DEVELOPMENT_UNSAFE_INLINE_CSP=true
       - SECRET_KEY=F0E5AD933D7F6FD8F4DBB3E038C501C052DC0593C686D21ACB30AE205D2F634B
       - UTILS_SECRET=F0E5AD933D7F6FD8F4DBB3E038C501C052DC0593C686D21ACB30AE205D2F634B
+      - VITE_ENABLE_HMR=true
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     stdin_open: true
     tty: true
 

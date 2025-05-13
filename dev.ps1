@@ -12,6 +12,7 @@ function Show-Help {
     Write-Host "Commands:"
     Write-Host "  start       - Start the development environment in detached mode"
     Write-Host "  dev         - Start the development environment with hot reloading (interactive)"
+    Write-Host "  debug       - Start the development environment with extra debugging for hot reload"
     Write-Host "  stop        - Stop the development environment"
     Write-Host "  restart     - Restart the development environment"
     Write-Host "  logs        - Show logs from all services"
@@ -82,10 +83,32 @@ function Dev-Environment {
     docker-compose -f docker-compose.dev.yml up --build
 }
 
+function Debug-Environment {
+    Write-Host "Starting Outline development environment with hot reloading in debug mode..." -ForegroundColor Green
+    Write-Host "This mode includes extra logging to diagnose hot reload issues" -ForegroundColor Yellow
+    Write-Host "Press Ctrl+C to stop the environment" -ForegroundColor Yellow
+
+    # Stop any running containers first
+    docker-compose -f docker-compose.dev.yml down
+
+    # Rebuild the image to ensure latest changes
+    docker-compose -f docker-compose.dev.yml build --no-cache outline
+
+    # Start with extra debugging environment variables
+    $env:DEBUG="vite:*,nodemon:*,http,express:*,socket.io:*"
+    $env:VITE_ENABLE_HMR="true"
+    $env:CHOKIDAR_USEPOLLING="true"
+    $env:WATCHPACK_POLLING="true"
+
+    # Build and start in interactive mode with verbose output
+    docker-compose -f docker-compose.dev.yml up --build
+}
+
 # Execute the requested command
 switch ($command) {
     "start" { Start-Environment }
     "dev" { Dev-Environment }
+    "debug" { Debug-Environment }
     "stop" { Stop-Environment }
     "restart" {
         Stop-Environment

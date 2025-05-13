@@ -1,0 +1,19 @@
+{
+  "verbose": true,
+  "watch": [
+    "server",
+    "shared"
+  ],
+  "ignore": [
+    "server/static",
+    "server/migrations",
+    "data",
+    "build",
+    "app",
+    "shared/editor",
+    "node_modules"
+  ],
+  "ext": "js,ts,tsx",
+  "delay": "500",
+  "legacyWatch": true
+}
