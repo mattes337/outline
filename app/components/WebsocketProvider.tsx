@@ -351,7 +351,34 @@ class WebsocketProvider extends React.Component<Props> {
 
                 // Force reload the document content without page refresh
                 // This will reset the YJS state and trigger a complete refresh
-                document.fetch({ force: true });
+                try {
+                  console.log(
+                    "[TRACE] Attempting to refresh document content",
+                    {
+                      documentId,
+                      title: document?.title,
+                    }
+                  );
+
+                  // Fetch the document with force=true to get the latest content and state
+                  await document.fetch({ force: true });
+
+                  console.log(
+                    "[TRACE] Document content refreshed successfully",
+                    {
+                      documentId,
+                      title: document?.title,
+                    }
+                  );
+                } catch (error) {
+                  console.error(
+                    "[ERROR] Failed to refresh document content",
+                    error
+                  );
+
+                  // If fetch fails, fall back to page reload
+                  window.location.reload();
+                }
               }
             }
           }

@@ -519,7 +519,7 @@ export default class Document extends ArchivableModel implements Searchable {
       if (options.force) {
         this.lastApiUpdate = null;
 
-        // If this document has an editor instance, reset it to force a refresh
+        // If this document has an editor instance, handle refresh based on mode
         if (this.editor && !this.editor.props.readOnly) {
           console.log("[TRACE] Document in edit mode, not resetting editor", {
             documentId: this.id,
@@ -533,9 +533,32 @@ export default class Document extends ArchivableModel implements Searchable {
             title: this.title,
           });
 
-          // For simplicity, we'll just reload the page to get the latest content
-          // This avoids issues with the YJS state and ensures we get the latest content
-          window.location.reload();
+          // Check if we have a multiplayer provider with resetDocument method
+          if (
+            this.editor.props.multiplayer &&
+            this.editor.provider?.resetDocument
+          ) {
+            console.log(
+              "[TRACE] Using provider.resetDocument to refresh content",
+              {
+                documentId: this.id,
+              }
+            );
+
+            // Use the provider's resetDocument method to refresh the content
+            // This will update the YJS state without a full page reload
+            this.editor.provider.resetDocument();
+          } else {
+            console.log(
+              "[TRACE] No provider.resetDocument method available, falling back to page reload",
+              {
+                documentId: this.id,
+              }
+            );
+
+            // Fall back to page reload if we can't reset the document through the provider
+            window.location.reload();
+          }
         }
       }
 

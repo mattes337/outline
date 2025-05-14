@@ -30,7 +30,7 @@ import Document from "~/models/Document";
 // Extend HocuspocusProvider with our custom method
 declare module "@hocuspocus/provider" {
   interface HocuspocusProvider {
-    resetDocument?: (newContent: string) => boolean;
+    resetDocument?: () => boolean;
   }
 }
 
@@ -156,23 +156,43 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       setRemoteSynced(true);
     });
 
-    // Add a method to reset the YJS document with new content
-    provider.resetDocument = (_newContent: string) => {
-      console.log("[TRACE] Resetting YJS document with new content", {
+    // Add a method to reset the YJS document with new content from the server
+    provider.resetDocument = () => {
+      console.log("[TRACE] Resetting YJS document with server content", {
         documentId,
       });
 
       try {
-        // Instead of trying to parse the content ourselves, we'll force a reload
-        // of the document from the server, which will include the updated state
-        console.log("[TRACE] Forcing page reload to refresh document content");
+        // Disconnect the provider to stop receiving updates temporarily
+        provider.disconnect();
 
-        // Force a page reload to get the latest content
-        window.location.reload();
+        // Clear the local document state
+        ydoc.destroy();
+
+        // Create a new Y.Doc instance
+        const newYDoc = new Y.Doc();
+        provider.document = newYDoc;
+
+        // Force a reconnection to get the latest state from the server
+        provider.connect();
+
+        console.log(
+          "[TRACE] YJS document reset initiated, reconnecting to server",
+          {
+            documentId,
+          }
+        );
+
+        // Set a flag to indicate we're waiting for a sync
+        setRemoteSynced(false);
+        setLocalSynced(false);
 
         return true;
       } catch (error) {
         console.error("[ERROR] Failed to reset YJS document", error);
+
+        // If the reset fails, fall back to a page reload
+        window.location.reload();
         return false;
       }
     };
