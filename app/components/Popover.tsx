@@ -30,6 +30,21 @@ type Props = PopoverProps & {
   hide: () => void;
 };
 
+// Props that should not be passed to DOM elements
+const FILTERED_PROPS = [
+  "unstable_arrowStyles",
+  "unstable_originalPlacement",
+  "unstable_update",
+  "place",
+  "unstable_popoverStyles",
+  "unstable_arrowRef",
+  "unstable_referenceRef",
+  "unstable_popoverRef",
+  "unstable_autoFocusOnShow",
+  "unstable_autoFocusOnHide",
+  "unstable_portal",
+];
+
 const Popover = (
   {
     children,
@@ -61,8 +76,14 @@ const Popover = (
   );
 
   if (isMobile) {
+    // Filter out props that shouldn't be passed to DOM elements for Dialog
+    const dialogProps = { ...rest };
+    FILTERED_PROPS.forEach(prop => {
+      delete dialogProps[prop as keyof typeof dialogProps];
+    });
+
     return (
-      <Dialog {...rest} modal>
+      <Dialog {...dialogProps} modal>
         <Contents
           ref={ref}
           $shrink={shrink}

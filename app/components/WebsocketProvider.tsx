@@ -258,7 +258,7 @@ class WebsocketProvider extends React.Component<Props> {
 
     this.socket.on(
       "documents.update",
-      action((event: WebsocketDocumentUpdateEvent) => {
+      action(async (event: WebsocketDocumentUpdateEvent) => {
         documents.add(event);
 
         if (event.collectionId) {

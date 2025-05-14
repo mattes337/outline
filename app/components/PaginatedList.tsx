@@ -113,6 +113,9 @@ const PaginatedList = <T extends PaginatedItem>({
   const user = useCurrentUser({ rejectOnEmpty: false });
   const { t } = useTranslation();
 
+  // Add a ref to track component mount status
+  const isMountedRef = React.useRef(true);
+
   const [error, setError] = React.useState<Error | undefined>();
   const [isFetchingMore, setIsFetchingMore] = React.useState(false);
   const [isFetching, setIsFetching] = React.useState(false);
@@ -123,6 +126,13 @@ const PaginatedList = <T extends PaginatedItem>({
   const [renderCount, setRenderCount] = React.useState(Pagination.defaultLimit);
   const [offset, setOffset] = React.useState(0);
   const [allowLoadMore, setAllowLoadMore] = React.useState(true);
+
+  // Set isMounted to false when component unmounts
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const reset = React.useCallback(() => {
     setOffset(0);
@@ -151,22 +161,29 @@ const PaginatedList = <T extends PaginatedItem>({
         ...options,
       });
 
-      if (offset !== 0) {
-        setRenderCount((prevCount) => prevCount + limit);
-      }
+      // Only update state if the component is still mounted
+      if (isMountedRef.current) {
+        if (offset !== 0) {
+          setRenderCount((prevCount) => prevCount + limit);
+        }
 
-      if (results && (results.length === 0 || results.length < limit)) {
-        setAllowLoadMore(false);
-      } else {
-        setOffset((prevOffset) => prevOffset + limit);
-      }
+        if (results && (results.length === 0 || results.length < limit)) {
+          setAllowLoadMore(false);
+        } else {
+          setOffset((prevOffset) => prevOffset + limit);
+        }
 
-      setIsFetchingInitial(false);
+        setIsFetchingInitial(false);
+      }
     } catch (err) {
-      setError(err);
+      // Only update state if the component is still mounted
+      if (isMountedRef.current) {
+        setError(err);
+      }
     } finally {
       // only the most recent fetch should end the loading state
-      if (counter >= fetchCounter) {
+      // and only if the component is still mounted
+      if (counter >= fetchCounter && isMountedRef.current) {
         setIsFetching(false);
         setIsFetchingMore(false);
       }
@@ -183,13 +200,13 @@ const PaginatedList = <T extends PaginatedItem>({
     // of lazy rendering then show another page.
     const leftToRender = (items?.length ?? 0) - renderCount;
 
-    if (leftToRender > 0) {
+    if (leftToRender > 0 && isMountedRef.current) {
       setRenderCount((prevCount) => prevCount + Pagination.defaultLimit);
     }
 
     // If there are less than a pages results in the cache go ahead and fetch
     // another page from the server
-    if (leftToRender <= Pagination.defaultLimit) {
+    if (leftToRender <= Pagination.defaultLimit && isMountedRef.current) {
       setIsFetchingMore(true);
       await fetchResults();
     }
@@ -200,7 +217,7 @@ const PaginatedList = <T extends PaginatedItem>({
 
   // Initial fetch on mount
   React.useEffect(() => {
-    if (fetch) {
+    if (fetch && isMountedRef.current) {
       void fetchResults();
     }
   }, [fetch]);
@@ -211,7 +228,7 @@ const PaginatedList = <T extends PaginatedItem>({
       return; // Skip on initial mount since it's handled by the above effect
     }
 
-    if (prevFetch !== fetch || !isEqual(prevOptions, options)) {
+    if ((prevFetch !== fetch || !isEqual(prevOptions, options)) && isMountedRef.current) {
       reset();
       void fetchResults();
     }
@@ -275,8 +292,8 @@ const PaginatedList = <T extends PaginatedItem>({
               "updatedAt" in item && item.updatedAt
                 ? item.updatedAt
                 : "createdAt" in item && item.createdAt
-                ? item.createdAt
-                : previousHeading;
+                  ? item.createdAt
+                  : previousHeading;
             const currentHeading = dateToHeading(
               currentDate,
               t,
