@@ -280,6 +280,25 @@ class WebsocketProvider extends React.Component<Props> {
               document.lastApiUpdate = null;
             }
 
+            // Log detailed information about the update for debugging
+            console.debug("[YJS] Received update event", {
+              documentId,
+              isApiUpdate: event.data?.isApiUpdate || false,
+              revisionCount: event.data?.revisionCount,
+              currentRevisionCount: document.revisionCount,
+              force: event.data?.force || false,
+            });
+
+            // Version check for synchronization
+            const serverRevisionCount = event.data?.revisionCount;
+            if (serverRevisionCount && document.revisionCount < serverRevisionCount) {
+              console.info("[YJS] Document is out of sync, needs refresh", {
+                documentId,
+                localRevision: document.revisionCount,
+                serverRevision: serverRevisionCount,
+              });
+            }
+
             // Check if this document is currently active
             if (this.props.ui.activeDocumentId === documentId) {
               console.log("[TRACE] Received update for document", {
@@ -306,14 +325,14 @@ class WebsocketProvider extends React.Component<Props> {
                 toast.warning(
                   this.props.t(
                     event.data?.isApiUpdate
-                      ? "This document has been updated by AI"
+                      ? "This document has been updated by API"
                       : "This document has been updated"
                   ),
                   {
                     duration: 6000,
                     description: this.props.t(
                       event.data?.isApiUpdate
-                        ? "Your changes may conflict with the AI's changes."
+                        ? "Your changes may conflict with the API changes."
                         : "Your changes may conflict with the recent updates."
                     ),
                     icon: <AlertTriangleIcon />,
@@ -336,7 +355,7 @@ class WebsocketProvider extends React.Component<Props> {
                 toast.info(
                   this.props.t(
                     event.data?.isApiUpdate
-                      ? "Document updated by AI"
+                      ? "Document updated via API"
                       : "Document updated"
                   ),
                   {
@@ -376,8 +395,33 @@ class WebsocketProvider extends React.Component<Props> {
                     error
                   );
 
-                  // If fetch fails, fall back to page reload
-                  window.location.reload();
+                  // Enhanced error handling
+                  toast.error(
+                    this.props.t("Error refreshing document"),
+                    {
+                      duration: 5000,
+                      description: this.props.t("Attempting to recover..."),
+                    }
+                  );
+
+                  // Recovery attempt with timeout and retry
+                  setTimeout(async () => {
+                    try {
+                      await document.fetch({ force: true });
+                      toast.success(this.props.t("Document recovered successfully"));
+                    } catch (retryError) {
+                      console.error("[ERROR] Recovery attempt failed", retryError);
+                      toast.error(
+                        this.props.t("Recovery failed"),
+                        {
+                          description: this.props.t("Reloading the page..."),
+                          duration: 3000,
+                        }
+                      );
+                      // Last resort: reload the page
+                      setTimeout(() => window.location.reload(), 3000);
+                    }
+                  }, 2000);
                 }
               }
             }
@@ -385,6 +429,18 @@ class WebsocketProvider extends React.Component<Props> {
         }
       })
     );
+
+    // Add error handling for YJS provider connections
+    this.socket.on("error", (error) => {
+      console.error("[YJS] Socket connection error:", error);
+
+      toast.error(this.props.t("Connection error"), {
+        description: this.props.t("Attempting to reconnect..."),
+        duration: 5000,
+      });
+
+      // The socket.io client will automatically try to reconnect
+    });
 
     this.socket.on(
       "documents.progress",
