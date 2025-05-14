@@ -43,7 +43,7 @@ function Show-Logs {
 
 function Build-Image {
     Write-Host "Building Outline development image..."
-    docker-compose -f docker-compose.dev.yml build outline
+    docker-compose -f docker-compose.dev.yml build outline --no-cache
 }
 
 function Open-Shell {
@@ -93,7 +93,7 @@ function Debug-Environment {
     docker-compose -f docker-compose.dev.yml down
 
     # Rebuild the image to ensure latest changes
-    docker-compose -f docker-compose.dev.yml build --no-cache outline
+    docker-compose -f docker-compose.dev.yml build outline
 
     # Start with extra debugging environment variables
     $env:DEBUG="vite:*,nodemon:*,http,express:*,socket.io:*"
