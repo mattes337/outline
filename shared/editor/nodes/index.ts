@@ -22,6 +22,7 @@ import CheckboxList from "./CheckboxList";
 import CodeBlock from "./CodeBlock";
 import CodeFence from "./CodeFence";
 import Doc from "./Doc";
+import Drawio from "../extensions/Drawio";
 import Embed from "./Embed";
 import Emoji from "./Emoji";
 import HardBreak from "./HardBreak";
@@ -108,6 +109,7 @@ export const richExtensions: Nodes = [
   Math,
   MathBlock,
   Mention,
+  Drawio,
   // Container type nodes should be last so that key handlers are registered for content inside
   // the container nodes first.
   ...listExtensions,

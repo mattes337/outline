@@ -254,4 +254,13 @@ export const buildPitchBlackTheme = (input: Partial<Colors>) => {
 
 export const light = buildLightTheme(defaultColors);
 
+export const drawioDiagramStyle = `
+  max-width: 100%;
+  border: 1px solid {(props) => props.theme.divider};
+  border-radius: 4px;
+  &:hover {
+    border-color: {(props) => props.theme.primary};
+  }
+`;
+
 export default light as DefaultTheme;
