@@ -126,7 +126,8 @@ export default async function documentUpdater(
         }, 'api-update'); // Transaction name for tracking
 
         // Update the state with the new YJS document state
-        document.state = Y.encodeStateAsUpdate(ydoc);
+        const stateUpdate = Y.encodeStateAsUpdate(ydoc);
+        document.state = Buffer.from(stateUpdate);
 
         // Track version for synchronization (using existing revisionCount field)
         document.revisionCount += 1;
@@ -159,7 +160,8 @@ export default async function documentUpdater(
           const doc = parser.parse(document.text);
 
           updateYFragment(ydoc, type, doc, new Map());
-          document.state = Y.encodeStateAsUpdate(ydoc);
+          const stateUpdate = Y.encodeStateAsUpdate(ydoc);
+          document.state = Buffer.from(stateUpdate);
 
           // Track version for synchronization
           document.revisionCount += 1;
