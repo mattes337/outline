@@ -90,6 +90,15 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       token,
     });
 
+    // Attach the provider to the document's editor instance
+    if (props.document?.editor) {
+      props.document.editor.provider = provider;
+      console.log("[DEBUG] Attached provider to editor", {
+        documentId,
+        hasProvider: !!props.document.editor.provider,
+      });
+    }
+
     const syncScrollPosition = throttle(() => {
       provider.setAwarenessField(
         "scrollY",
@@ -166,7 +175,10 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         // Disconnect the provider to stop receiving updates temporarily
         provider.disconnect();
 
-        // Clear the local document state
+        // Clear the local document state and persistence
+        void localProvider.clearData();
+
+        // Clear the YJS document state
         const prevDoc = provider.document;
         prevDoc.destroy();
 
@@ -174,11 +186,12 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         const newYDoc = new Y.Doc();
         provider.document = newYDoc;
 
+        // Set flags to indicate we're waiting for a sync
+        setRemoteSynced(false);
+        setLocalSynced(false);
+
         // Force a reconnection to get the latest state from the server
         provider.connect();
-
-        // Clear local persistence to ensure we get fresh state
-        void localProvider.clearData();
 
         console.log(
           "[TRACE] YJS document reset completed, reconnecting to server",
@@ -186,10 +199,6 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
             documentId,
           }
         );
-
-        // Set flags to indicate we're waiting for a sync
-        setRemoteSynced(false);
-        setLocalSynced(false);
 
         return true;
       } catch (error) {
@@ -201,6 +210,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         // If the reset fails, try one more time with a clean state
         try {
           provider.disconnect();
+          void localProvider.clearData();
           ydoc.destroy();
           const newYDoc = new Y.Doc();
           provider.document = newYDoc;
@@ -225,6 +235,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         isForced: update.isForced,
         hasEditor: !!props.document?.editor,
         readOnly: props.readOnly,
+        hasProvider: !!props.document?.editor?.provider,
       });
 
       // Check if this update is a forced update from the server (API update)
@@ -232,7 +243,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         const document = props.document;
         const isEditing = !props.readOnly;
 
-        if (!isEditing) {
+        if (!isEditing && document?.editor?.provider) {
           console.log(
             "[DEBUG] Document in view mode, attempting refresh",
             {
@@ -245,11 +256,10 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
           );
 
           // Use the provider to reset the document content
-          if (provider.resetDocument) {
-            console.log("[DEBUG] Using provider.resetDocument", { documentId });
-            const success = provider.resetDocument();
-            console.log("[DEBUG] resetDocument result", { success, documentId });
-          } else {
+          const success = provider.resetDocument?.();
+          console.log("[DEBUG] resetDocument result", { success, documentId });
+
+          if (!success) {
             console.log("[DEBUG] Falling back to document fetch", { documentId });
             // Fallback to fetching the document and updating the editor content
             document.fetch({ force: true }).then(() => {
@@ -267,12 +277,8 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
                   dataLength: document.data?.content?.length,
                 });
                 props.onContentChange(document.data);
-              } else {
-                console.warn("[DEBUG] No onContentChange handler available", {
-                  documentId,
-                });
               }
-            }).catch(error => {
+            }).catch((error: Error) => {
               console.error("[DEBUG] Error fetching document", {
                 documentId,
                 error,
