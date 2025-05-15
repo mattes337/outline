@@ -425,8 +425,17 @@ const Status = styled(Action)`
   color: ${(props) => props.theme.slate};
 `;
 
-const CustomWarningIcon = styled(AlertTriangleIcon)`
+const WarningIconWrapper = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: ${(props) => props.theme.warning};
 `;
+
+const CustomWarningIcon = () => (
+  <WarningIconWrapper>
+    <AlertTriangleIcon />
+  </WarningIconWrapper>
+);
 
 export default observer(DocumentHeader);
