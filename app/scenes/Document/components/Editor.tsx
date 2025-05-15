@@ -74,6 +74,8 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     updateState: updateDocState,
   } = useDocumentContext();
 
+  const { comments } = useStores();
+
   const handleRefChanged = React.useCallback((node: any) => {
     console.log("[DEBUG] Editor ref changed", {
       documentId: document.id,
