@@ -6,7 +6,7 @@ import {
   MoonIcon,
   MoreIcon,
   SunIcon,
-  AlertTriangleIcon,
+  WarningIcon,
 } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -435,7 +435,7 @@ const WarningIconWrapper = styled.div`
 const CustomWarningIcon = () => {
   return (
     <WarningIconWrapper>
-      <AlertTriangleIcon size={24} />
+      <WarningIcon size={24} />
     </WarningIconWrapper>
   );
 };
