@@ -100,21 +100,52 @@ class WebsocketProvider extends React.Component<Props> {
   }, 1000, { leading: true, trailing: false });
 
   debouncedRefreshDocument = debounce((document: any) => {
+    console.log("[DEBUG] Starting debouncedRefreshDocument", {
+      documentId: document.id,
+      hasEditor: !!document.editor,
+      hasProvider: !!document.editor?.provider,
+      hasResetDocument: !!document.editor?.provider?.resetDocument,
+    });
+
     if (document.editor?.provider?.resetDocument) {
-      console.log("[TRACE] Using provider.resetDocument to refresh content", {
+      console.log("[DEBUG] Using provider.resetDocument to refresh content", {
         documentId: document.id,
       });
-      document.editor.provider.resetDocument();
+      const success = document.editor.provider.resetDocument();
+      console.log("[DEBUG] resetDocument result", {
+        documentId: document.id,
+        success,
+      });
     } else {
-      console.log("[TRACE] Fetching updated document content", {
+      console.log("[DEBUG] Fetching updated document content", {
         documentId: document.id,
         force: true,
       });
       document.fetch({ force: true }).then(() => {
+        console.log("[DEBUG] Document fetch completed", {
+          documentId: document.id,
+          hasData: !!document.data,
+          hasEditor: !!document.editor,
+          hasOnContentChange: !!document.editor?.props.onContentChange,
+        });
+
         // Force editor to update with new content
         if (document.editor?.props.onContentChange) {
+          console.log("[DEBUG] Calling onContentChange with new data", {
+            documentId: document.id,
+            dataLength: document.data?.content?.length,
+          });
           document.editor.props.onContentChange(document.data);
+        } else {
+          console.warn("[DEBUG] No onContentChange handler available", {
+            documentId: document.id,
+          });
         }
+      }).catch(error => {
+        console.error("[DEBUG] Error fetching document", {
+          documentId: document.id,
+          error,
+        });
       });
     }
   }, 1000, { leading: true, trailing: false });
@@ -292,17 +323,30 @@ class WebsocketProvider extends React.Component<Props> {
     this.socket.on(
       "documents.update",
       action(async (event: WebsocketDocumentUpdateEvent) => {
+        console.log("[DEBUG] Received documents.update event", {
+          event,
+          hasDocument: !!documents.get(event.id),
+        });
+
         documents.add(event);
 
         const documentId = event.id;
         const document = documents.get(documentId);
 
+        console.log("[DEBUG] After documents.add", {
+          documentId,
+          hasDocument: !!document,
+          isActive: this.props.ui.activeDocumentId === documentId,
+        });
+
         // Check if this document is currently active
         if (this.props.ui.activeDocumentId === documentId) {
-          console.log("[TRACE] Received update for document", {
+          console.log("[DEBUG] Processing active document update", {
             documentId,
             title: document?.title,
             isApiUpdate: event.data?.isApiUpdate || false,
+            hasEditor: !!document?.editor,
+            isEditing: document?.editor && !document.editor.props.readOnly,
           });
 
           // Get the current document from the editor context to check if it's in edit mode
@@ -310,10 +354,9 @@ class WebsocketProvider extends React.Component<Props> {
           const isEditing = editor && !editor.props.readOnly;
 
           if (isEditing) {
-            console.log("[TRACE] Document is in edit mode, showing warning", {
+            console.log("[DEBUG] Document is in edit mode", {
               documentId,
               title: document?.title,
-              isEditing: true,
             });
 
             // In edit mode: show a toast notification with a warning
@@ -337,10 +380,11 @@ class WebsocketProvider extends React.Component<Props> {
             // Set a flag on the document to show a warning icon in the editor
             document.lastApiUpdate = new Date().toISOString();
           } else {
-            console.log("[TRACE] Document is in view mode, auto-refreshing", {
+            console.log("[DEBUG] Document is in view mode, preparing refresh", {
               documentId,
               title: document?.title,
-              isEditing: false,
+              hasEditor: !!document?.editor,
+              hasProvider: !!document?.editor?.provider,
             });
 
             // In view mode: use debounced toast and refresh

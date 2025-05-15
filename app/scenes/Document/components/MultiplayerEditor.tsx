@@ -198,6 +198,14 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
     };
 
     provider.on("update", (update: any) => {
+      console.log("[DEBUG] YJS provider received update event", {
+        update,
+        documentId,
+        isForced: update.isForced,
+        hasEditor: !!props.document?.editor,
+        readOnly: props.readOnly,
+      });
+
       // Check if this update is a forced update from the server (API update)
       if (update.isForced) {
         const document = props.document;
@@ -205,27 +213,57 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
 
         if (!isEditing) {
           console.log(
-            "[TRACE] Document updated via API, refreshing in view mode",
+            "[DEBUG] Document in view mode, attempting refresh",
             {
               documentId,
               title: document?.title,
+              hasEditor: !!document?.editor,
+              hasProvider: !!document?.editor?.provider,
+              hasResetDocument: !!document?.editor?.provider?.resetDocument,
             }
           );
 
           // Use the provider to reset the document content
           if (provider.resetDocument) {
-            provider.resetDocument();
+            console.log("[DEBUG] Using provider.resetDocument", { documentId });
+            const success = provider.resetDocument();
+            console.log("[DEBUG] resetDocument result", { success, documentId });
           } else {
+            console.log("[DEBUG] Falling back to document fetch", { documentId });
             // Fallback to fetching the document and updating the editor content
             document.fetch({ force: true }).then(() => {
+              console.log("[DEBUG] Document fetch completed", {
+                documentId,
+                hasData: !!document.data,
+                hasEditor: !!document.editor,
+                hasOnContentChange: !!props.onContentChange,
+              });
+
               // Force editor to update with new content
               if (props.onContentChange) {
+                console.log("[DEBUG] Calling onContentChange with new data", {
+                  documentId,
+                  dataLength: document.data?.content?.length,
+                });
                 props.onContentChange(document.data);
+              } else {
+                console.warn("[DEBUG] No onContentChange handler available", {
+                  documentId,
+                });
               }
+            }).catch(error => {
+              console.error("[DEBUG] Error fetching document", {
+                documentId,
+                error,
+              });
             });
           }
         } else {
           // In edit mode, show warning
+          console.log("[DEBUG] Document in edit mode, showing warning", {
+            documentId,
+            title: document?.title,
+          });
           toast.warning(t("This document has been updated via API"), {
             duration: 6000,
             description: t("Your changes may conflict with the API changes."),
