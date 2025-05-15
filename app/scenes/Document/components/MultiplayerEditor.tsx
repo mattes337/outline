@@ -167,7 +167,8 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         provider.disconnect();
 
         // Clear the local document state
-        ydoc.destroy();
+        const prevDoc = provider.document;
+        prevDoc.destroy();
 
         // Create a new Y.Doc instance
         const newYDoc = new Y.Doc();
@@ -176,24 +177,44 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         // Force a reconnection to get the latest state from the server
         provider.connect();
 
+        // Clear local persistence to ensure we get fresh state
+        void localProvider.clearData();
+
         console.log(
-          "[TRACE] YJS document reset initiated, reconnecting to server",
+          "[TRACE] YJS document reset completed, reconnecting to server",
           {
             documentId,
           }
         );
 
-        // Set a flag to indicate we're waiting for a sync
+        // Set flags to indicate we're waiting for a sync
         setRemoteSynced(false);
         setLocalSynced(false);
 
         return true;
       } catch (error) {
-        console.error("[ERROR] Failed to reset YJS document", error);
+        console.error("[ERROR] Failed to reset YJS document", {
+          documentId,
+          error,
+        });
 
-        // If the reset fails, fall back to a page reload
-        window.location.reload();
-        return false;
+        // If the reset fails, try one more time with a clean state
+        try {
+          provider.disconnect();
+          ydoc.destroy();
+          const newYDoc = new Y.Doc();
+          provider.document = newYDoc;
+          provider.connect();
+          return true;
+        } catch (retryError) {
+          console.error("[ERROR] Failed to reset YJS document on retry", {
+            documentId,
+            error: retryError,
+          });
+          // Only fall back to page reload if both attempts fail
+          window.location.reload();
+          return false;
+        }
       }
     };
 
