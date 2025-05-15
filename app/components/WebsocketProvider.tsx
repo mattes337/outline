@@ -110,7 +110,12 @@ class WebsocketProvider extends React.Component<Props> {
         documentId: document.id,
         force: true,
       });
-      document.fetch({ force: true });
+      document.fetch({ force: true }).then(() => {
+        // Force editor to update with new content
+        if (document.editor?.props.onContentChange) {
+          document.editor.props.onContentChange(document.data);
+        }
+      });
     }
   }, 1000, { leading: true, trailing: false });
 

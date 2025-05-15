@@ -212,12 +212,17 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
             }
           );
 
-          // Use the provider to reset the document content instead of page reload
+          // Use the provider to reset the document content
           if (provider.resetDocument) {
             provider.resetDocument();
           } else {
-            // Fallback to fetching the document if provider doesn't support reset
-            document.fetch({ force: true });
+            // Fallback to fetching the document and updating the editor content
+            document.fetch({ force: true }).then(() => {
+              // Force editor to update with new content
+              if (props.onContentChange) {
+                props.onContentChange(document.data);
+              }
+            });
           }
         } else {
           // In edit mode, show warning
