@@ -54,29 +54,45 @@ type Props = Omit<EditorProps, "editorStyle"> & {
  */
 function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const titleRef = React.useRef<RefHandle>(null);
+  const childRef = React.useRef<HTMLDivElement>(null);
+  const { document } = props;
+  const { ui } = useStores();
   const { t } = useTranslation();
   const match = useRouteMatch();
-  const focusedComment = useFocusedComment();
-  const { ui, comments } = useStores();
-  const user = useCurrentUser({ rejectOnEmpty: false });
-  const team = useCurrentTeam({ rejectOnEmpty: false });
   const history = useHistory();
-  const sidebarContext = useLocationSidebarContext();
-  const params = useQuery();
+  const team = useCurrentTeam();
+  const user = useCurrentUser();
+  const can = usePolicy(document);
+  const focusedComment = useFocusedComment();
+  const { sidebarContext } = useLocationSidebarContext();
+  const { shareId } = useQuery();
+  const [editorInitialized, setEditorInitialized] = React.useState(false);
+
+  const handleRefChanged = React.useCallback((node: any) => {
+    console.log("[DEBUG] Editor ref changed", {
+      documentId: document.id,
+      hasNode: !!node,
+    });
+    if (node) {
+      // Attach the editor instance to the document
+      document.editor = node;
+      console.log("[DEBUG] Attached editor to document", {
+        documentId: document.id,
+        hasEditor: !!document.editor,
+      });
+    }
+  }, [document]);
+
   const {
-    document,
     onChangeTitle,
     onChangeIcon,
     isDraft,
-    shareId,
     readOnly,
     children,
     multiplayer,
     ...rest
   } = props;
-  const can = usePolicy(document);
   const iconColor = document.color ?? (last(colorPalette) as string);
-  const childRef = React.useRef<HTMLDivElement>(null);
   const focusAtStart = React.useCallback(() => {
     if (ref.current) {
       ref.current.focusAtStart();
@@ -173,7 +189,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
 
   const {
     setEditor,
-    setEditorInitialized,
+    setEditorInitialized: setDocEditorInitialized,
     updateState: updateDocState,
   } = useDocumentContext();
   const handleRefChanged = React.useCallback(setEditor, [setEditor]);
@@ -190,13 +206,13 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   );
 
   const handleInit = React.useCallback(
-    () => setEditorInitialized(true),
-    [setEditorInitialized]
+    () => setDocEditorInitialized(true),
+    [setDocEditorInitialized]
   );
 
   const handleDestroy = React.useCallback(
-    () => setEditorInitialized(false),
-    [setEditorInitialized]
+    () => setDocEditorInitialized(false),
+    [setDocEditorInitialized]
   );
 
   const direction = titleRef.current?.getComputedDirection();
@@ -256,6 +272,13 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         onInit={handleInit}
         onDestroy={handleDestroy}
         onChange={updateDocState}
+        onContentChange={(content) => {
+          console.log("[DEBUG] Editor content change", {
+            documentId: document.id,
+            hasContent: !!content,
+          });
+          document.data = content;
+        }}
         extensions={extensions}
         editorStyle={editorStyle}
         {...rest}
