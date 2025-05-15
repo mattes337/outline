@@ -137,8 +137,8 @@ function DocumentHeader({
         showContents
           ? t("Hide contents")
           : hasHeadings
-          ? t("Show contents")
-          : `${t("Show contents")} (${t("available when headings are added")})`
+            ? t("Show contents")
+            : `${t("Show contents")} (${t("available when headings are added")})`
       }
       shortcut={`Ctrl+${altDisplay}+h`}
       placement="bottom"
@@ -157,11 +157,11 @@ function DocumentHeader({
         content={
           document.aiProgressInfo
             ? t("AI is currently editing: {{progressInfo}}", {
-                progressInfo: document.aiProgressInfo,
-              })
+              progressInfo: document.aiProgressInfo,
+            })
             : document.lastApiUpdate
-            ? t("This document has been updated by AI")
-            : t("Edit {{noun}}", {
+              ? t("This document has been updated by AI")
+              : t("Edit {{noun}}", {
                 noun: document.noun,
               })
         }
@@ -414,7 +414,7 @@ function DocumentHeader({
   );
 }
 
-const StyledHeader = styled(Header)<{ $hidden: boolean }>`
+const StyledHeader = styled(Header) <{ $hidden: boolean }>`
   transition: opacity 500ms ease-in-out;
   ${(props) => props.$hidden && "opacity: 0;"}
 `;
@@ -425,38 +425,8 @@ const Status = styled(Action)`
   color: ${(props) => props.theme.slate};
 `;
 
-// Custom warning triangle icon as a fallback for AlertTriangleIcon
-const CustomWarningIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ color: "orange" }}
-  >
-    <path
-      d="M12 9V13"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M12 17.0195V17"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M10.2427 3.75736C11.0243 2.97579 12.2757 2.97579 13.0573 3.75736L20.2427 10.9427C21.0243 11.7243 21.0243 12.9757 20.2427 13.7573L13.0573 20.9427C12.2757 21.7242 11.0243 21.7242 10.2427 20.9427L3.05736 13.7573C2.27579 12.9757 2.27579 11.7243 3.05736 10.9427L10.2427 3.75736Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+const CustomWarningIcon = styled(AlertTriangleIcon)`
+  color: ${(props) => props.theme.warning};
+`;
 
 export default observer(DocumentHeader);

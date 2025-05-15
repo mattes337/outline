@@ -24,7 +24,7 @@ function UpdatedDocumentBanner() {
     ? documents.get(ui.activeDocumentId)
     : undefined;
   const isVisible =
-    document?.hasRecentApiUpdate && editor && !editor.props.readOnly;
+    document?.lastApiUpdate && editor && !editor.props.readOnly;
 
   const handleRevertAndUpdate = React.useCallback(() => {
     if (document) {
@@ -44,7 +44,11 @@ function UpdatedDocumentBanner() {
             exit={{ opacity: 0, y: -30 }}
           >
             <BannerContent>
-              {t("This document has been updated")}
+              {document?.aiProgressInfo
+                ? t("AI is currently editing: {{progressInfo}}", {
+                  progressInfo: document.aiProgressInfo,
+                })
+                : t("This document has been updated by AI")}
               <Button onClick={handleRevertAndUpdate} neutral small>
                 {t("Revert changes and load newest version")}
               </Button>

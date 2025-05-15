@@ -408,9 +408,16 @@ class WebsocketProvider extends React.Component<Props> {
           // Update document with progress info
           document.aiProgressInfo = progressInfo;
 
-          // If the document is currently open, show a toast notification
+          // If the document is currently active, show a toast notification
           if (this.props.ui.activeDocumentId === documentId) {
-            // Use the global toast function from sonner library
+            console.log(
+              "[TRACE] Showing progress notification for active document",
+              {
+                documentId,
+                progressInfo,
+              }
+            );
+
             toast.info(`AI Agent: ${progressInfo}`, {
               duration: 5000,
             });

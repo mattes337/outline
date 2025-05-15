@@ -204,7 +204,6 @@ export type WebsocketDocumentUpdateEvent = PartialExcept<Document, "id" | "title
 
 export type WebsocketDocumentProgressEvent = {
   documentId: string;
-  title: string;
   progressInfo: string;
 };
 
@@ -258,8 +257,8 @@ export type Permission = {
 // TODO: Can we make this type driven by the @Field decorator
 export type Properties<C> = {
   [Property in keyof C as C[Property] extends JSONValue
-    ? Property
-    : never]?: C[Property];
+  ? Property
+  : never]?: C[Property];
 };
 
 export enum CommentSortType {
