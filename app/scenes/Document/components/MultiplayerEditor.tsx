@@ -202,13 +202,12 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         // Clear the local document state and persistence
         void localProvider.clearData();
 
-        // Clear the YJS document state
-        const prevDoc = provider.document;
-        prevDoc.destroy();
-
-        // Create a new Y.Doc instance
-        const newYDoc = new Y.Doc();
-        provider.document = newYDoc;
+        // Instead of trying to replace the document instance, clear its contents
+        const ytext = provider.document.get('default');
+        if (ytext) {
+          // Delete all content
+          ytext.delete(0, ytext.length);
+        }
 
         // Set flags to indicate we're waiting for a sync
         setRemoteSynced(false);
@@ -235,9 +234,13 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         try {
           provider.disconnect();
           void localProvider.clearData();
-          ydoc.destroy();
-          const newYDoc = new Y.Doc();
-          provider.document = newYDoc;
+
+          // Clear document contents again
+          const ytext = provider.document.get('default');
+          if (ytext) {
+            ytext.delete(0, ytext.length);
+          }
+
           provider.connect();
           return true;
         } catch (retryError) {
