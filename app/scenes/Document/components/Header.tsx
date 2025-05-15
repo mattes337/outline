@@ -432,10 +432,12 @@ const WarningIconWrapper = styled.div`
   color: ${(props) => props.theme.warning};
 `;
 
-const CustomWarningIcon = () => (
-  <WarningIconWrapper>
-    <AlertTriangleIcon />
-  </WarningIconWrapper>
-);
+const CustomWarningIcon = () => {
+  return (
+    <WarningIconWrapper>
+      <AlertTriangleIcon size={24} />
+    </WarningIconWrapper>
+  );
+};
 
 export default observer(DocumentHeader);
