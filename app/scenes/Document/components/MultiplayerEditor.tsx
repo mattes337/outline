@@ -3,6 +3,7 @@ import throttle from "lodash/throttle";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
+import { mergeRefs } from "react-merge-refs";
 import { toast } from "sonner";
 import { AlertTriangleIcon } from "outline-icons";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -72,6 +73,29 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
   const isVisible = usePageVisibility();
   const isMounted = useIsMounted();
 
+  // Track editor instance changes
+  const editorRef = React.useRef<any>(null);
+
+  // Handle editor ref changes
+  const handleEditorRefChange = React.useCallback((node: any) => {
+    console.log("[DEBUG] Editor ref changed in MultiplayerEditor", {
+      documentId,
+      hasNode: !!node,
+      hasProvider: !!remoteProvider,
+    });
+
+    editorRef.current = node;
+
+    // If we have both the editor and provider, ensure they're connected
+    if (node && remoteProvider) {
+      node.provider = remoteProvider;
+      console.log("[DEBUG] Reattached provider to editor after ref change", {
+        documentId,
+        hasProvider: !!node.provider,
+      });
+    }
+  }, [documentId, remoteProvider]);
+
   // Provider initialization must be within useLayoutEffect rather than useState
   // or useMemo as both of these are ran twice in React StrictMode resulting in
   // an orphaned websocket connection.
@@ -90,12 +114,12 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       token,
     });
 
-    // Attach the provider to the document's editor instance
-    if (props.document?.editor) {
-      props.document.editor.provider = provider;
+    // Attach the provider to the current editor instance if available
+    if (editorRef.current) {
+      editorRef.current.provider = provider;
       console.log("[DEBUG] Attached provider to editor", {
         documentId,
-        hasProvider: !!props.document.editor.provider,
+        hasProvider: !!editorRef.current.provider,
       });
     }
 
@@ -460,7 +484,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         value={undefined}
         defaultValue={undefined}
         extensions={extensions}
-        ref={showCache ? undefined : ref}
+        ref={mergeRefs([ref, handleEditorRefChange])}
         style={
           showCache
             ? {
