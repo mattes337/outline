@@ -72,6 +72,8 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
   const isIdle = useIdle();
   const isVisible = usePageVisibility();
   const isMounted = useIsMounted();
+  const [isResetting, setIsResetting] = React.useState(false);
+  const resetTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   // Track editor instance changes
   const editorRef = React.useRef<any>(null);
@@ -195,19 +197,30 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         documentId,
       });
 
+      // Prevent multiple resets
+      if (isResetting) {
+        console.log("[DEBUG] Reset already in progress, skipping", {
+          documentId,
+        });
+        return true;
+      }
+
       try {
+        setIsResetting(true);
+
+        // Clear any pending reset timeout
+        if (resetTimeoutRef.current) {
+          clearTimeout(resetTimeoutRef.current);
+        }
+
         // Disconnect the provider to stop receiving updates temporarily
         provider.disconnect();
 
         // Clear the local document state and persistence
         void localProvider.clearData();
 
-        // Instead of trying to replace the document instance, clear its contents
-        const ytext = provider.document.get('default');
-        if (ytext) {
-          // Delete all content
-          ytext.delete(0, ytext.length);
-        }
+        // Set awareness state to indicate we're resetting
+        provider.setAwarenessField("resetting", true);
 
         // Set flags to indicate we're waiting for a sync
         setRemoteSynced(false);
@@ -215,6 +228,12 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
 
         // Force a reconnection to get the latest state from the server
         provider.connect();
+
+        // Set a timeout to clear the resetting state
+        resetTimeoutRef.current = setTimeout(() => {
+          setIsResetting(false);
+          provider.setAwarenessField("resetting", false);
+        }, 1000);
 
         console.log(
           "[TRACE] YJS document reset completed, reconnecting to server",
@@ -230,28 +249,19 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
           error,
         });
 
-        // If the reset fails, try one more time with a clean state
-        try {
-          provider.disconnect();
-          void localProvider.clearData();
+        setIsResetting(false);
+        provider.setAwarenessField("resetting", false);
 
-          // Clear document contents again
-          const ytext = provider.document.get('default');
-          if (ytext) {
-            ytext.delete(0, ytext.length);
-          }
-
-          provider.connect();
-          return true;
-        } catch (retryError) {
-          console.error("[ERROR] Failed to reset YJS document on retry", {
-            documentId,
-            error: retryError,
+        // If the reset fails, try fetching the document instead
+        if (props.document) {
+          props.document.fetch({ force: true }).then(() => {
+            if (props.onContentChange && props.document?.data) {
+              props.onContentChange(props.document.data);
+            }
           });
-          // Only fall back to page reload if both attempts fail
-          window.location.reload();
-          return false;
         }
+
+        return false;
       }
     };
 
@@ -266,7 +276,7 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
       });
 
       // Check if this update is a forced update from the server (API update)
-      if (update.isForced) {
+      if (update.isForced && !isResetting) {
         const document = props.document;
         const isEditing = !props.readOnly;
 
@@ -285,33 +295,6 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
           // Use the provider to reset the document content
           const success = provider.resetDocument?.();
           console.log("[DEBUG] resetDocument result", { success, documentId });
-
-          if (!success) {
-            console.log("[DEBUG] Falling back to document fetch", { documentId });
-            // Fallback to fetching the document and updating the editor content
-            document.fetch({ force: true }).then(() => {
-              console.log("[DEBUG] Document fetch completed", {
-                documentId,
-                hasData: !!document.data,
-                hasEditor: !!document.editor,
-                hasOnContentChange: !!props.onContentChange,
-              });
-
-              // Force editor to update with new content
-              if (props.onContentChange) {
-                console.log("[DEBUG] Calling onContentChange with new data", {
-                  documentId,
-                  dataLength: document.data?.content?.length,
-                });
-                props.onContentChange(document.data);
-              }
-            }).catch((error: Error) => {
-              console.error("[DEBUG] Error fetching document", {
-                documentId,
-                error,
-              });
-            });
-          }
         } else {
           // In edit mode, show warning
           console.log("[DEBUG] Document in edit mode, showing warning", {
@@ -369,6 +352,9 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
     setRemoteProvider(provider);
 
     return () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+      }
       window.removeEventListener("click", finishObserving);
       window.removeEventListener("wheel", finishObserving);
       window.removeEventListener("scroll", syncScrollPosition);
