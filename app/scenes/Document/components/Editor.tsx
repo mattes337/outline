@@ -111,6 +111,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
 
   React.useEffect(() => {
     if (focusedComment) {
+      const params = new URLSearchParams(window.location.search);
       const viewingResolved = params.get("resolved") === "";
       if (
         (focusedComment.isResolved && !viewingResolved) ||
@@ -127,7 +128,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
       }
       ui.set({ commentsExpanded: true });
     }
-  }, [focusedComment, ui, document.id, history, params, sidebarContext]);
+  }, [focusedComment, ui, document.id, history, sidebarContext]);
 
   // Save document when blurring title, but delay so that if clicking on a
   // button this is allowed to execute first.
