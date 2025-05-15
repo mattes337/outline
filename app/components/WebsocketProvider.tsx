@@ -100,11 +100,18 @@ class WebsocketProvider extends React.Component<Props> {
   }, 1000, { leading: true, trailing: false });
 
   debouncedRefreshDocument = debounce((document: any) => {
-    console.log("[TRACE] Fetching updated document content", {
-      documentId: document.id,
-      force: true,
-    });
-    document.fetch({ force: true });
+    if (document.editor?.provider?.resetDocument) {
+      console.log("[TRACE] Using provider.resetDocument to refresh content", {
+        documentId: document.id,
+      });
+      document.editor.provider.resetDocument();
+    } else {
+      console.log("[TRACE] Fetching updated document content", {
+        documentId: document.id,
+        force: true,
+      });
+      document.fetch({ force: true });
+    }
   }, 1000, { leading: true, trailing: false });
 
   componentDidMount() {
@@ -282,105 +289,66 @@ class WebsocketProvider extends React.Component<Props> {
       action(async (event: WebsocketDocumentUpdateEvent) => {
         documents.add(event);
 
-        if (event.collectionId) {
-          const collection = collections.get(event.collectionId);
-          collection?.updateDocument(event);
-        }
+        const documentId = event.id;
+        const document = documents.get(documentId);
 
-        // Handle document updates (both API and user-originated)
-        if (event.id) {
-          const documentId = event.id;
-          const document = documents.get(documentId);
+        // Check if this document is currently active
+        if (this.props.ui.activeDocumentId === documentId) {
+          console.log("[TRACE] Received update for document", {
+            documentId,
+            title: document?.title,
+            isApiUpdate: event.data?.isApiUpdate || false,
+          });
 
-          if (document) {
-            // Reset the progress state when an update is received
-            document.aiProgressInfo = null;
+          // Get the current document from the editor context to check if it's in edit mode
+          const editor = document?.editor;
+          const isEditing = editor && !editor.props.readOnly;
 
-            // If this is not an API update, reset the lastApiUpdate flag
-            if (!event.data?.isApiUpdate) {
-              document.lastApiUpdate = null;
-            }
-
-            // Log detailed information about the update for debugging
-            console.debug("[YJS] Received update event", {
+          if (isEditing) {
+            console.log("[TRACE] Document is in edit mode, showing warning", {
               documentId,
-              isApiUpdate: event.data?.isApiUpdate || false,
-              revisionCount: event.data?.revisionCount,
-              currentRevisionCount: document.revisionCount,
-              force: event.data?.force || false,
+              title: document?.title,
+              isEditing: true,
             });
 
-            // Version check for synchronization
-            const serverRevisionCount = event.data?.revisionCount;
-            if (serverRevisionCount && document.revisionCount < serverRevisionCount) {
-              console.info("[YJS] Document is out of sync, needs refresh", {
-                documentId,
-                localRevision: document.revisionCount,
-                serverRevision: serverRevisionCount,
-              });
-
-              // Update the client's revisionCount
-              document.revisionCount = serverRevisionCount;
-            }
-
-            // Check if this document is currently active
-            if (this.props.ui.activeDocumentId === documentId) {
-              console.log("[TRACE] Received update for document", {
-                documentId,
-                title: document?.title,
-                isApiUpdate: event.data?.isApiUpdate || false,
-              });
-
-              // Get the current document from the editor context to check if it's in edit mode
-              const editor = document?.editor;
-              const isEditing = editor && !editor.props.readOnly;
-
-              if (isEditing) {
-                console.log("[TRACE] Document is in edit mode, showing warning", {
-                  documentId,
-                  title: document?.title,
-                  isEditing: true,
-                });
-
-                // In edit mode: show a toast notification with a warning
-                toast.warning(
-                  this.props.t(
-                    event.data?.isApiUpdate
-                      ? "This document has been updated by API"
-                      : "This document has been updated"
-                  ),
-                  {
-                    duration: 6000,
-                    description: this.props.t(
-                      event.data?.isApiUpdate
-                        ? "Your changes may conflict with the API changes."
-                        : "Your changes may conflict with the recent updates."
-                    ),
-                    icon: <AlertTriangleIcon />,
-                  }
-                );
-
-                // Set a flag on the document to show a warning icon in the editor
-                document.lastApiUpdate = new Date().toISOString();
-              } else {
-                console.log("[TRACE] Document is in view mode, auto-refreshing", {
-                  documentId,
-                  title: document?.title,
-                  isEditing: false,
-                });
-
-                // In view mode: use debounced toast and refresh
-                this.debouncedShowUpdateToast(
-                  this.props.t(
-                    event.data?.isApiUpdate
-                      ? "Document updated by API"
-                      : "Document updated"
-                  )
-                );
-
-                this.debouncedRefreshDocument(document);
+            // In edit mode: show a toast notification with a warning
+            toast.warning(
+              this.props.t(
+                event.data?.isApiUpdate
+                  ? "This document has been updated by API"
+                  : "This document has been updated"
+              ),
+              {
+                duration: 6000,
+                description: this.props.t(
+                  event.data?.isApiUpdate
+                    ? "Your changes may conflict with the API changes."
+                    : "Your changes may conflict with the recent updates."
+                ),
+                icon: <AlertTriangleIcon />,
               }
-            }
+            );
+
+            // Set a flag on the document to show a warning icon in the editor
+            document.lastApiUpdate = new Date().toISOString();
+          } else {
+            console.log("[TRACE] Document is in view mode, auto-refreshing", {
+              documentId,
+              title: document?.title,
+              isEditing: false,
+            });
+
+            // In view mode: use debounced toast and refresh
+            this.debouncedShowUpdateToast(
+              this.props.t(
+                event.data?.isApiUpdate
+                  ? "Document updated by API"
+                  : "Document updated"
+              )
+            );
+
+            // Use debounced refresh to avoid multiple rapid refreshes
+            this.debouncedRefreshDocument(document);
           }
         }
       })

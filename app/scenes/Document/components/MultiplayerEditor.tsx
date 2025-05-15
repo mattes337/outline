@@ -203,7 +203,6 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         const document = props.document;
         const isEditing = !props.readOnly;
 
-        // Force reload the document content
         if (!isEditing) {
           console.log(
             "[TRACE] Document updated via API, refreshing in view mode",
@@ -213,14 +212,13 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
             }
           );
 
-          // In view mode, force a page reload to get the latest content
-          console.log("[TRACE] Document updated via API, forcing page reload", {
-            documentId,
-            title: document?.title,
-          });
-
-          // Force a page reload to get the latest content
-          window.location.reload();
+          // Use the provider to reset the document content instead of page reload
+          if (provider.resetDocument) {
+            provider.resetDocument();
+          } else {
+            // Fallback to fetching the document if provider doesn't support reset
+            document.fetch({ force: true });
+          }
         } else {
           // In edit mode, show warning
           toast.warning(t("This document has been updated via API"), {
@@ -396,9 +394,9 @@ function MultiplayerEditor({ onSynced, ...props }: Props, ref: any) {
         style={
           showCache
             ? {
-                height: 0,
-                opacity: 0,
-              }
+              height: 0,
+              opacity: 0,
+            }
             : undefined
         }
         className={showCursorNames ? "show-cursor-names" : undefined}
