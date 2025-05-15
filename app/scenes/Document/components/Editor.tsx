@@ -64,7 +64,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const user = useCurrentUser();
   const can = usePolicy(document);
   const focusedComment = useFocusedComment();
-  const { sidebarContext } = useLocationSidebarContext();
+  const locationSidebarContext = useLocationSidebarContext();
   const { shareId } = useQuery();
   const [editorInitialized, setEditorInitialized] = React.useState(false);
 
@@ -124,13 +124,13 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
           pathname: location.pathname,
           state: {
             commentId: focusedComment.id,
-            sidebarContext,
+            sidebarContext: locationSidebarContext,
           },
         });
       }
       ui.set({ commentsExpanded: true });
     }
-  }, [focusedComment, ui, document.id, history, sidebarContext]);
+  }, [focusedComment, ui, document.id, history, locationSidebarContext]);
 
   // Save document when blurring title, but delay so that if clicking on a
   // button this is allowed to execute first.
@@ -155,10 +155,10 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     (commentId: string) => {
       history.replace({
         pathname: window.location.pathname.replace(/\/history$/, ""),
-        state: { commentId, sidebarContext },
+        state: { commentId, sidebarContext: locationSidebarContext },
       });
     },
-    [history, sidebarContext]
+    [history, locationSidebarContext]
   );
 
   // Create a Comment model in local store when a comment mark is created, this
@@ -183,10 +183,10 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
 
       history.replace({
         pathname: window.location.pathname.replace(/\/history$/, ""),
-        state: { commentId, sidebarContext },
+        state: { commentId, sidebarContext: locationSidebarContext },
       });
     },
-    [comments, user?.id, props.id, history, sidebarContext]
+    [comments, user?.id, props.id, history, locationSidebarContext]
   );
 
   // Soft delete the Comment model when associated mark is totally removed.
@@ -251,7 +251,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
               match.path === matchDocumentHistory
                 ? documentPath(document)
                 : documentHistoryPath(document),
-            state: { sidebarContext },
+            state: { sidebarContext: locationSidebarContext },
           }}
           rtl={direction === "rtl"}
         />
