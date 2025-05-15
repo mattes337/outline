@@ -7,6 +7,7 @@ import { withTranslation, WithTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
 import debounce from "lodash/debounce";
+import env from "~/env";
 import {
   FileOperationState,
   FileOperationType,
@@ -100,6 +101,12 @@ class WebsocketProvider extends React.Component<Props> {
   }, 1000, { leading: true, trailing: false });
 
   debouncedRefreshDocument = debounce((document: any) => {
+    // Ensure environment variables are available
+    if (!env || !env.ENVIRONMENT) {
+      console.warn("Environment variables not available yet, skipping document refresh");
+      return;
+    }
+
     const debug = env.ENVIRONMENT === "development";
     const documentId = document.id;
 
