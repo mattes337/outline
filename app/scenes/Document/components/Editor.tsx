@@ -68,11 +68,21 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   const { shareId } = useQuery();
   const [editorInitialized, setEditorInitialized] = React.useState(false);
 
+  const {
+    setEditor,
+    setEditorInitialized: setDocEditorInitialized,
+    updateState: updateDocState,
+  } = useDocumentContext();
+
   const handleRefChanged = React.useCallback((node: any) => {
     console.log("[DEBUG] Editor ref changed", {
       documentId: document.id,
       hasNode: !!node,
     });
+
+    // Set the editor in document context
+    setEditor(node);
+
     if (node) {
       // Attach the editor instance to the document
       document.editor = node;
@@ -81,7 +91,7 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
         hasEditor: !!document.editor,
       });
     }
-  }, [document]);
+  }, [document, setEditor]);
 
   const {
     onChangeTitle,
@@ -187,14 +197,6 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
     [comments]
   );
 
-  const {
-    setEditor,
-    setEditorInitialized: setDocEditorInitialized,
-    updateState: updateDocState,
-  } = useDocumentContext();
-  const handleRefChanged = React.useCallback(setEditor, [setEditor]);
-  const EditorComponent = multiplayer ? MultiplayerEditor : Editor;
-
   const childOffsetHeight = childRef.current?.offsetHeight || 0;
   const editorStyle = React.useMemo(
     () => ({
@@ -216,6 +218,8 @@ function DocumentEditor(props: Props, ref: React.RefObject<any>) {
   );
 
   const direction = titleRef.current?.getComputedDirection();
+
+  const EditorComponent = multiplayer ? MultiplayerEditor : Editor;
 
   return (
     <Flex auto column>
