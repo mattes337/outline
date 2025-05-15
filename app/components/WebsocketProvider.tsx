@@ -6,39 +6,8 @@ import * as React from "react";
 import { withTranslation, WithTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
-// Custom warning triangle icon
-const AlertTriangleIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ color: "orange" }}
-  >
-    <path
-      d="M12 9V13"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M12 17.0195V17"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M10.2427 3.75736C11.0243 2.97579 12.2757 2.97579 13.0573 3.75736L20.2427 10.9427C21.0243 11.7243 21.0243 12.9757 20.2427 13.7573L13.0573 20.9427C12.2757 21.7242 11.0243 21.7242 10.2427 20.9427L3.05736 13.7573C2.27579 12.9757 2.27579 11.7243 3.05736 10.9427L10.2427 3.75736Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+import debounce from "lodash/debounce";
+import AlertTriangleIcon from "~/components/Icons/AlertTriangleIcon";
 import {
   FileOperationState,
   FileOperationType,
@@ -90,6 +59,21 @@ class WebsocketProvider extends React.Component<Props> {
   @observable
   socket: SocketWithAuthentication | null;
 
+  // Add debounced handlers as class properties
+  debouncedShowUpdateToast = debounce((message: string) => {
+    toast.info(message, {
+      duration: 3000,
+    });
+  }, 1000, { leading: true, trailing: false });
+
+  debouncedRefreshDocument = debounce((document: any) => {
+    console.log("[TRACE] Fetching updated document content", {
+      documentId: document.id,
+      force: true,
+    });
+    document.fetch({ force: true });
+  }, 1000, { leading: true, trailing: false });
+
   componentDidMount() {
     this.createConnection();
     document.addEventListener(getVisibilityListener(), this.checkConnection);
@@ -102,6 +86,10 @@ class WebsocketProvider extends React.Component<Props> {
     }
 
     document.removeEventListener(getVisibilityListener(), this.checkConnection);
+
+    // Cancel any pending debounced operations
+    this.debouncedShowUpdateToast.cancel();
+    this.debouncedRefreshDocument.cancel();
   }
 
   checkConnection = () => {
@@ -315,14 +303,11 @@ class WebsocketProvider extends React.Component<Props> {
               const isEditing = editor && !editor.props.readOnly;
 
               if (isEditing) {
-                console.log(
-                  "[TRACE] Document is in edit mode, showing warning",
-                  {
-                    documentId,
-                    title: document?.title,
-                    isEditing: true,
-                  }
-                );
+                console.log("[TRACE] Document is in edit mode, showing warning", {
+                  documentId,
+                  title: document?.title,
+                  isEditing: true,
+                });
 
                 // In edit mode: show a toast notification with a warning
                 toast.warning(
@@ -345,87 +330,22 @@ class WebsocketProvider extends React.Component<Props> {
                 // Set a flag on the document to show a warning icon in the editor
                 document.lastApiUpdate = new Date().toISOString();
               } else {
-                console.log(
-                  "[TRACE] Document is in view mode, auto-refreshing",
-                  {
-                    documentId,
-                    title: document?.title,
-                    isEditing: false,
-                  }
-                );
-
-                // In view mode: automatically refresh the document content
-                toast.info(
-                  this.props.t(
-                    event.data?.isApiUpdate
-                      ? "Document updated via API"
-                      : "Document updated"
-                  ),
-                  {
-                    duration: 3000,
-                  }
-                );
-
-                console.log("[TRACE] Fetching updated document content", {
+                console.log("[TRACE] Document is in view mode, auto-refreshing", {
                   documentId,
-                  force: true,
+                  title: document?.title,
+                  isEditing: false,
                 });
 
-                // Force reload the document content without page refresh
-                // This will reset the YJS state and trigger a complete refresh
-                try {
-                  console.log(
-                    "[TRACE] Attempting to refresh document content",
-                    {
-                      documentId,
-                      title: document?.title,
-                    }
-                  );
+                // In view mode: use debounced toast and refresh
+                this.debouncedShowUpdateToast(
+                  this.props.t(
+                    event.data?.isApiUpdate
+                      ? "Document updated by API"
+                      : "Document updated"
+                  )
+                );
 
-                  // Fetch the document with force=true to get the latest content and state
-                  await document.fetch({ force: true });
-
-                  console.log(
-                    "[TRACE] Document content refreshed successfully",
-                    {
-                      documentId,
-                      title: document?.title,
-                    }
-                  );
-                } catch (error) {
-                  console.error(
-                    "[ERROR] Failed to refresh document content",
-                    error
-                  );
-
-                  // Enhanced error handling
-                  toast.error(
-                    this.props.t("Error refreshing document"),
-                    {
-                      duration: 5000,
-                      description: this.props.t("Attempting to recover..."),
-                    }
-                  );
-
-                  // Recovery attempt with timeout and retry
-                  setTimeout(async () => {
-                    try {
-                      await document.fetch({ force: true });
-                      toast.success(this.props.t("Document recovered successfully"));
-                    } catch (retryError) {
-                      console.error("[ERROR] Recovery attempt failed", retryError);
-                      toast.error(
-                        this.props.t("Recovery failed"),
-                        {
-                          description: this.props.t("Reloading the page..."),
-                          duration: 3000,
-                        }
-                      );
-                      // Last resort: reload the page
-                      setTimeout(() => window.location.reload(), 3000);
-                    }
-                  }, 2000);
-                }
+                this.debouncedRefreshDocument(document);
               }
             }
           }
