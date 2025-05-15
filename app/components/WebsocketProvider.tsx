@@ -297,6 +297,9 @@ class WebsocketProvider extends React.Component<Props> {
                 localRevision: document.revisionCount,
                 serverRevision: serverRevisionCount,
               });
+
+              // Update the client's revisionCount
+              document.revisionCount = serverRevisionCount;
             }
 
             // Check if this document is currently active

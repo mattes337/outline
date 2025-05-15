@@ -7,6 +7,7 @@ import { parser } from "@server/editor";
 import { APIContext } from "@server/types";
 import Logger from "@server/logging/Logger";
 import notifyCollaborationService from "./notifyCollaborationService";
+import { Transaction } from "sequelize";
 
 type Props = {
   /** The user updating the document */
@@ -208,9 +209,8 @@ export default async function documentUpdater(
     document.lastModifiedById = user.id;
     document.updatedBy = user;
 
-    // Note: In a real implementation, we would save the document here
-    // For this example, we'll assume the document is saved elsewhere
-    // or that the Document model handles saving differently
+    // Save the document changes to the database
+    await document.saveWithCtx(ctx);
 
     // Add isApiUpdate flag to the event data
     await Event.createFromContext(ctx, {
