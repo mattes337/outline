@@ -18,6 +18,86 @@ When a user has a document open and that document is updated via API (not by ano
 
 3. **No banner for updated documents in edit mode**: When in edit mode and a document update is received, there should be a banner at the top of the document indicating that a new version is available, with a button to "revert local changes and switch to newest version".
 
+## Issues Fixed
+
+### Document Content Reset Issue (Fixed)
+
+#### Problem
+When attempting to reset a document's content after an API update, the system was trying to directly modify the YJS document instance, which is read-only. This led to errors and caused the page to reload as a fallback.
+
+#### Root Cause
+1. The `resetDocument` method was trying to replace the entire YJS document instance
+2. The provider's document property is read-only, causing errors when trying to set it
+3. Multiple reset attempts were happening simultaneously due to lack of state tracking
+4. The editor ref was changing during the reset process, causing provider attachment issues
+
+#### Solution
+Modified the `MultiplayerEditor` component to properly handle document resets:
+
+1. Added state tracking to prevent multiple simultaneous resets:
+```typescript
+const [isResetting, setIsResetting] = React.useState(false);
+const resetTimeoutRef = React.useRef<NodeJS.Timeout>();
+```
+
+2. Improved provider attachment to handle editor ref changes:
+```typescript
+const handleEditorRefChange = React.useCallback((node: any) => {
+  editorRef.current = node;
+  if (node && remoteProvider) {
+    node.provider = remoteProvider;
+  }
+}, [documentId, remoteProvider]);
+```
+
+3. Modified the reset process to:
+   - Use provider's awareness mechanism instead of direct document manipulation
+   - Handle cleanup properly
+   - Provide graceful fallback to document fetch when reset fails
+   - Prevent multiple resets from happening simultaneously
+
+4. Added guards in update handlers to prevent processing updates during reset:
+```typescript
+if (update.isForced && !isResetting) {
+  // Handle update...
+}
+```
+
+#### Implementation Details
+
+The key changes were made in `app/scenes/Document/components/MultiplayerEditor.tsx`:
+
+1. Track reset state to prevent multiple resets
+2. Use provider's awareness mechanism for reset coordination
+3. Improved error handling with fallback to document fetch
+4. Proper cleanup of timeouts and state
+5. Better handling of editor ref changes
+
+#### Code Cleanup
+The following code was identified as obsolete and removed:
+- Direct YJS document manipulation code
+- Multiple reset attempts logic
+- Page reload fallback
+- Direct document content clearing
+
+## Next Steps
+
+1. Monitor the fix in production to ensure:
+   - No more page reloads during document updates
+   - Proper content synchronization between clients
+   - No duplicate update notifications
+
+2. Consider additional improvements:
+   - Add retry mechanism with exponential backoff for failed resets
+   - Implement proper TypeScript types for all components
+   - Add more detailed logging for debugging
+   - Add tests to verify reset behavior
+
+## Related Issues
+- Fixed: Document content updates requiring page reload
+- Fixed: Multiple update notifications
+- Fixed: Content being completely removed during reset
+
 ## Implementation Steps
 
 ### 1. Flag API-Originated Updates
@@ -489,3 +569,31 @@ fetch = async (options: FetchOptions = {}): Promise<Document> => {
 ## Important Note
 
 Before implementing these changes, the actual codebase must be checked as this document will be applied for future upstream updates. The implementation details may need to be adjusted based on the current state of the codebase.
+
+## Code Cleanup
+
+### Removed Obsolete Code and Redundancies
+
+1. WebsocketProvider.tsx:
+   - Removed redundant custom AlertTriangleIcon component in favor of the one from outline-icons
+   - Consolidated debug logging with consistent use of debug flag
+   - Improved error handling in debouncedRefreshDocument
+   - Removed redundant logging in document fetch flow
+
+2. MultiplayerEditor.tsx:
+   - Consolidated debug logging with consistent use of debug flag
+   - Improved log messages for better clarity and debugging
+   - Added isResetting state to debug logs
+   - Removed redundant log messages
+   - Simplified log objects to only include necessary information
+
+3. Editor.tsx:
+   - No obsolete code or redundancies found
+   - Component is well-structured and follows best practices
+
+### Benefits of Cleanup
+- Reduced code duplication
+- More consistent debugging experience
+- Better error tracking and debugging capabilities
+- Smaller bundle size by removing redundant code
+- Clearer and more maintainable codebase

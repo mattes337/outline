@@ -100,53 +100,36 @@ class WebsocketProvider extends React.Component<Props> {
   }, 1000, { leading: true, trailing: false });
 
   debouncedRefreshDocument = debounce((document: any) => {
-    console.log("[DEBUG] Starting debouncedRefreshDocument", {
-      documentId: document.id,
-      hasEditor: !!document.editor,
-      hasProvider: !!document.editor?.provider,
-      hasResetDocument: !!document.editor?.provider?.resetDocument,
-    });
+    const debug = env.ENVIRONMENT === "development";
+    const documentId = document.id;
 
-    if (document.editor?.provider?.resetDocument) {
-      console.log("[DEBUG] Using provider.resetDocument to refresh content", {
-        documentId: document.id,
+    if (debug) {
+      console.log("[DEBUG] Starting document refresh", {
+        documentId,
+        hasEditor: !!document.editor,
+        hasProvider: !!document.editor?.provider,
+        hasResetDocument: !!document.editor?.provider?.resetDocument,
       });
-      const success = document.editor.provider.resetDocument();
-      console.log("[DEBUG] resetDocument result", {
-        documentId: document.id,
-        success,
-      });
-    } else {
-      console.log("[DEBUG] Fetching updated document content", {
-        documentId: document.id,
-        force: true,
-      });
-      document.fetch({ force: true }).then(() => {
-        console.log("[DEBUG] Document fetch completed", {
-          documentId: document.id,
-          hasData: !!document.data,
-          hasEditor: !!document.editor,
-          hasOnContentChange: !!document.editor?.props.onContentChange,
-        });
+    }
 
-        // Force editor to update with new content
-        if (document.editor?.props.onContentChange) {
-          console.log("[DEBUG] Calling onContentChange with new data", {
-            documentId: document.id,
-            dataLength: document.data?.content?.length,
-          });
-          document.editor.props.onContentChange(document.data);
-        } else {
-          console.warn("[DEBUG] No onContentChange handler available", {
-            documentId: document.id,
-          });
+    try {
+      if (document.editor?.provider?.resetDocument) {
+        if (debug) {
+          console.log("[DEBUG] Using provider.resetDocument", { documentId });
         }
-      }).catch(error => {
-        console.error("[DEBUG] Error fetching document", {
-          documentId: document.id,
-          error,
+        document.editor.provider.resetDocument();
+      } else {
+        if (debug) {
+          console.log("[DEBUG] Falling back to document fetch", { documentId });
+        }
+        document.fetch({ force: true }).then(() => {
+          if (document.editor?.props.onContentChange) {
+            document.editor.props.onContentChange(document.data);
+          }
         });
-      });
+      }
+    } catch (error) {
+      console.error("[ERROR] Document refresh failed", { documentId, error });
     }
   }, 1000, { leading: true, trailing: false });
 
