@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from "react";
-import Modal from "@components/Modal";
+import React, { useRef, useCallback, useEffect } from "react";
+import styled from "styled-components";
+import { Dialog, DialogBackdrop, useDialogState } from "reakit/Dialog";
 import { DrawIoEmbed } from "react-drawio";
 import { uploadImage } from "@shared/utils/uploadImage";
 
@@ -29,6 +30,7 @@ export default function DrawioDialog({
     initialXml,
 }: Props) {
     const ref = useRef<any>();
+    const dialog = useDialogState({ visible: isOpen });
 
     const handleSave = useCallback(async () => {
         try {
@@ -57,33 +59,84 @@ export default function DrawioDialog({
         }
     }, [onClose, onSubmit]);
 
+    // Keyboard shortcut for CTRL/CMD+S
+    useEffect(() => {
+        if (!isOpen) return;
+        const handler = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+                event.preventDefault();
+                handleSave();
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [isOpen, handleSave]);
+
     return (
-        <Modal
-            isOpen={isOpen}
-            onRequestClose={onClose}
-            title="Draw.io Diagram"
-            fullscreen
-        >
-            <div style={{ height: "80vh", width: "100%" }}>
-                <DrawIoEmbed
-                    ref={ref}
-                    xml={initialXml ? atob(initialXml) : undefined}
-                    urlParameters={{
-                        ui: "dark",
-                        libraries: true,
-                        saveAndExit: false,
-                        noExitBtn: true,
-                        noSaveBtn: true
-                    }}
-                    configuration={{
-                        defaultFonts: ["Inter"]
-                    }}
-                />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px" }}>
-                <button onClick={onClose}>Cancel</button>
-                <button onClick={handleSave}>Save Diagram</button>
-            </div>
-        </Modal>
+        <>
+            <DialogBackdrop {...dialog} onClick={onClose} />
+            <Dialog {...dialog} aria-label="Draw.io Diagram">
+                <DialogContainer>
+                    <DrawioArea>
+                        <DrawIoEmbed
+                            ref={ref}
+                            xml={initialXml ? atob(initialXml) : undefined}
+                            urlParameters={{
+                                ui: "dark",
+                                libraries: true,
+                                saveAndExit: false,
+                                noExitBtn: true,
+                                noSaveBtn: true
+                            }}
+                            configuration={{
+                                defaultFonts: ["Inter"]
+                            }}
+                        />
+                    </DrawioArea>
+                    <Footer>
+                        <button onClick={onClose}>Cancel</button>
+                        <button onClick={handleSave}>Save Diagram</button>
+                    </Footer>
+                </DialogContainer>
+            </Dialog>
+        </>
     );
-} 
+}
+
+const DialogContainer = styled.div`
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0 0 0;
+  background: white;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+`;
+
+const DrawioArea = styled.div`
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  padding: 0 32px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+
+  & > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+`;
+
+const Footer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 32px 32px;
+  background: none;
+`;
