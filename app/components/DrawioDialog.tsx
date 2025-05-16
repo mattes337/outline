@@ -32,14 +32,20 @@ export default function DrawioDialog({
 
     const handleSave = useCallback(async () => {
         try {
+            console.log("[Drawio] Starting save process");
             const xml = await ref.current?.getXml();
+            console.log("[Drawio] Got XML", xml?.substring(0, 50) + "...");
             const png = await ref.current?.getPng();
+            console.log("[Drawio] Got PNG data URL");
 
             // Convert PNG data URL to File
             const file = dataURLtoFile(png, "diagram.png");
+            console.log("[Drawio] Converted to File object");
 
             // Upload using Outline's image upload
+            console.log("[Drawio] Starting image upload");
             const imageUrl = await uploadImage(file);
+            console.log("[Drawio] Image uploaded successfully", imageUrl);
 
             onSubmit({
                 xml: btoa(xml),  // base64 encode XML
@@ -47,7 +53,7 @@ export default function DrawioDialog({
             });
             onClose();
         } catch (error) {
-            console.error("Failed to save diagram:", error);
+            console.error("[Drawio] Failed to save diagram:", error);
         }
     }, [onClose, onSubmit]);
 

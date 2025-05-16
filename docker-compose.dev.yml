@@ -19,13 +19,6 @@ services:
       - outline-data:/var/lib/outline/data
       # Exclude node_modules from the bind mount to improve performance
       - /opt/outline/node_modules
-    # Add healthcheck to ensure the service is running properly
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
     environment:
       - NODE_ENV=development
       - URL=http://localhost:3000

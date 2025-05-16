@@ -40,6 +40,7 @@ export default class Drawio extends Node {
     commands({ type }: { type: NodeType }) {
         return {
             drawio: (): Command => (state, dispatch) => {
+                console.log("[Drawio] Command triggered");
                 window.dispatchEvent(new CustomEvent("outline:drawio:new"));
                 return true;
             },
