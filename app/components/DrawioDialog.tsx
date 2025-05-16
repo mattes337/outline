@@ -34,41 +34,49 @@ export default function DrawioDialog({
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorInstance, setEditorInstance] = useState<any>(null);
 
+    const handleExport = useCallback((data: { data: string; format: string }) => {
+        console.log("[Drawio] Export data received:", data);
+
+        // Convert PNG data URL to File
+        const file = dataURLtoFile(data.data, "diagram.png");
+        console.log("[Drawio] Converted to File object");
+
+        // Upload using Outline's image upload
+        console.log("[Drawio] Starting image upload");
+        uploadImage(file).then(imageUrl => {
+            console.log("[Drawio] Image uploaded successfully", imageUrl);
+            onSubmit({
+                xml: btoa(data.xml),  // base64 encode XML
+                imageUrl
+            });
+            onClose();
+        }).catch(error => {
+            console.error("[Drawio] Failed to upload image:", error);
+            throw new Error("Failed to upload image");
+        });
+
+
+    }, []);
+
     const handleSave = useCallback(async () => {
         try {
             console.log("[Drawio] Starting save process");
 
-            if (!editorInstance) {
+            if (!ref.current) {
                 throw new Error("Draw.io editor not initialized");
             }
 
-            // Export diagram data
-            console.log("[Drawio] Exporting diagram...");
-            const result = await editorInstance.exportDiagram();
-            console.log("[Drawio] Export result:", result);
-
-            if (!result || !result.xml || !result.png) {
-                throw new Error("Failed to export diagram data");
-            }
-
-            // Convert PNG data URL to File
-            const file = dataURLtoFile(result.png, "diagram.png");
-            console.log("[Drawio] Converted to File object");
-
-            // Upload using Outline's image upload
-            console.log("[Drawio] Starting image upload");
-            const imageUrl = await uploadImage(file);
-            console.log("[Drawio] Image uploaded successfully", imageUrl);
-
-            onSubmit({
-                xml: btoa(result.xml),  // base64 encode XML
-                imageUrl
+            // Get PNG data
+            console.log("[Drawio] Getting PNG data...");
+            await ref.current.exportDiagram({
+                format: 'png'
             });
-            onClose();
+
         } catch (error) {
             console.error("[Drawio] Failed to save diagram:", error);
+            // You might want to show an error message to the user here
         }
-    }, [onClose, onSubmit, editorInstance]);
+    }, [onClose, onSubmit]);
 
     // Reset editor state when dialog opens/closes
     useEffect(() => {
@@ -144,6 +152,7 @@ export default function DrawioDialog({
                             configuration={{
                                 defaultFonts: ["Inter"]
                             }}
+                            onExport={handleExport}
                         />
                     </DrawioArea>
                     <Footer>
