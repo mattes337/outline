@@ -1,20 +1,22 @@
+import { AttachmentPreset } from "@shared/types";
+import { uploadFile } from "~/utils/files";
+import { AttachmentValidation } from "@shared/validations";
+
 // Basic placeholder for image upload utility
 // Replace with Outline's actual upload logic if available
 export async function uploadImage(file: File): Promise<string> {
-    // Example: Use fetch to upload to /api/uploads or similar endpoint
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/uploads", {
-        method: "POST",
-        body: formData,
-    });
-
-    if (!response.ok) {
-        throw new Error("Image upload failed");
+    // Validate that the file is an image
+    if (!AttachmentValidation.imageContentTypes.includes(file.type)) {
+        throw new Error("File must be an image");
     }
 
-    const data = await response.json();
-    // Adjust this according to your API response
-    return data.url || data.path || data.imageUrl;
+    const attachment = await uploadFile(file, {
+        preset: AttachmentPreset.DocumentAttachment,
+        name: file.name,
+    });
+
+    // Return the URL of the uploaded attachment
+    // For document attachments, we use the redirectUrl which is used by the serializer
+    // to detect attachment vs link
+    return attachment.url;
 } 

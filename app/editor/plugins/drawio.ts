@@ -1,7 +1,7 @@
 import { Plugin } from "prosemirror-state";
 import Drawio from "@shared/editor/extensions/Drawio";
-import DrawioDialog from "@components/DrawioDialog";
-import DrawioComponent from "@components/DrawioComponent";
+import DrawioDialog from "~/components/DrawioDialog";
+import DrawioComponent from "~/components/DrawioComponent";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { light as defaultTheme } from "@shared/styles/theme";
@@ -46,6 +46,8 @@ const DrawioDialogPortal: React.FC<DrawioDialogProps> = (props) => {
 
 export default function createDrawioPlugin() {
     let dialogContainer: HTMLDivElement | null = null;
+    let editorView: any = null;
+    let isDialogOpen = false;
 
     const renderDialog = (props: DrawioDialogProps) => {
         if (!dialogContainer) {
@@ -57,12 +59,14 @@ export default function createDrawioPlugin() {
 
     const handleNewDiagram = () => {
         console.log("[Drawio] handleNewDiagram called");
-        if (!dialogContainer) {
+        if (!isDialogOpen) {
             console.log("[Drawio] Creating new dialog");
+            isDialogOpen = true;
             renderDialog({
                 isOpen: true,
                 onClose: () => {
                     console.log("[Drawio] Dialog closed");
+                    isDialogOpen = false;
                     if (dialogContainer) {
                         ReactDOM.unmountComponentAtNode(dialogContainer);
                         document.body.removeChild(dialogContainer);
@@ -71,11 +75,19 @@ export default function createDrawioPlugin() {
                 },
                 onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
                     console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl });
-                    const { state, dispatch } = window.editor.view;
-                    const { tr } = state;
-                    const node = state.schema.nodes.drawio.create({ xml, imageUrl });
-                    tr.replaceSelectionWith(node);
-                    dispatch(tr);
+                    if (!editorView) {
+                        console.error("[Drawio] Editor view not available");
+                        return;
+                    }
+                    try {
+                        const { state, dispatch } = editorView;
+                        const { tr } = state;
+                        const node = state.schema.nodes.drawio.create({ xml, imageUrl });
+                        tr.replaceSelectionWith(node);
+                        dispatch(tr);
+                    } catch (error) {
+                        console.error("[Drawio] Error inserting diagram:", error);
+                    }
                 },
             });
         }
@@ -83,11 +95,13 @@ export default function createDrawioPlugin() {
 
     const handleEditDiagram = (event: CustomEvent) => {
         const { pos, xml } = event.detail;
-        if (!dialogContainer) {
+        if (!isDialogOpen) {
+            isDialogOpen = true;
             renderDialog({
                 isOpen: true,
                 initialXml: xml,
                 onClose: () => {
+                    isDialogOpen = false;
                     if (dialogContainer) {
                         ReactDOM.unmountComponentAtNode(dialogContainer);
                         document.body.removeChild(dialogContainer);
@@ -95,19 +109,52 @@ export default function createDrawioPlugin() {
                     }
                 },
                 onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
-                    const { state, dispatch } = window.editor.view;
-                    const { tr } = state;
-                    tr.setNodeMarkup(pos, undefined, { xml, imageUrl });
-                    dispatch(tr);
+                    if (!editorView) {
+                        console.error("[Drawio] Editor view not available");
+                        return;
+                    }
+                    try {
+                        const { state, dispatch } = editorView;
+                        const { tr } = state;
+                        tr.setNodeMarkup(pos, undefined, { xml, imageUrl });
+                        dispatch(tr);
+                    } catch (error) {
+                        console.error("[Drawio] Error updating diagram:", error);
+                    }
                 },
             });
         }
     };
 
-    window.addEventListener("outline:drawio:new", handleNewDiagram);
-    window.addEventListener("outline:drawio:edit", handleEditDiagram as EventListener);
+    // Initialize event listeners
+    const initializeEventListeners = () => {
+        console.log("[Drawio] Initializing event listeners");
+        window.addEventListener("outline:drawio:new", handleNewDiagram);
+        window.addEventListener("outline:drawio:edit", handleEditDiagram as EventListener);
+    };
+
+    // Clean up event listeners
+    const cleanupEventListeners = () => {
+        console.log("[Drawio] Cleaning up event listeners");
+        window.removeEventListener("outline:drawio:new", handleNewDiagram);
+        window.removeEventListener("outline:drawio:edit", handleEditDiagram as EventListener);
+    };
+
+    // Initialize event listeners immediately
+    initializeEventListeners();
 
     return new Plugin({
+        view: (view) => {
+            console.log("[Drawio] Plugin view initialized");
+            editorView = view;
+            return {
+                destroy: () => {
+                    console.log("[Drawio] Plugin view destroyed");
+                    editorView = null;
+                    cleanupEventListeners();
+                }
+            };
+        },
         props: {
             nodeViews: {
                 drawio: (node, view, getPos) => {

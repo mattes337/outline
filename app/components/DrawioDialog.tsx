@@ -11,6 +11,12 @@ interface Props {
     onSubmit: (res: { xml: string; imageUrl: string }) => void;
 }
 
+interface ExportData {
+    data: string;
+    format: string;
+    xml: string;
+}
+
 const dataURLtoFile = (dataurl: string, filename: string) => {
     const arr = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)?.[1];
@@ -34,7 +40,7 @@ export default function DrawioDialog({
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorInstance, setEditorInstance] = useState<any>(null);
 
-    const handleExport = useCallback((data: { data: string; format: string }) => {
+    const handleExport = useCallback((data: ExportData) => {
         console.log("[Drawio] Export data received:", data);
 
         // Convert PNG data URL to File
@@ -54,9 +60,7 @@ export default function DrawioDialog({
             console.error("[Drawio] Failed to upload image:", error);
             throw new Error("Failed to upload image");
         });
-
-
-    }, []);
+    }, [onSubmit, onClose]);
 
     const handleSave = useCallback(async () => {
         try {
@@ -94,7 +98,7 @@ export default function DrawioDialog({
             try {
                 console.log("[Drawio] Waiting for editor to initialize...");
                 // Wait for a short delay to ensure the editor is ready
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 // Debug the ref
                 console.log("[Drawio] Ref current:", ref.current);
