@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from "react";
+import React, { useRef, useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import { Dialog, DialogBackdrop, useDialogState } from "reakit/Dialog";
 import { DrawIoEmbed } from "react-drawio";
@@ -31,17 +31,28 @@ export default function DrawioDialog({
 }: Props) {
     const ref = useRef<any>();
     const dialog = useDialogState({ visible: isOpen });
+    const [isEditorReady, setIsEditorReady] = useState(false);
+    const [editorInstance, setEditorInstance] = useState<any>(null);
 
     const handleSave = useCallback(async () => {
         try {
             console.log("[Drawio] Starting save process");
-            const xml = await ref.current?.getXml();
-            console.log("[Drawio] Got XML", xml?.substring(0, 50) + "...");
-            const png = await ref.current?.getPng();
-            console.log("[Drawio] Got PNG data URL");
+
+            if (!editorInstance) {
+                throw new Error("Draw.io editor not initialized");
+            }
+
+            // Export diagram data
+            console.log("[Drawio] Exporting diagram...");
+            const result = await editorInstance.exportDiagram();
+            console.log("[Drawio] Export result:", result);
+
+            if (!result || !result.xml || !result.png) {
+                throw new Error("Failed to export diagram data");
+            }
 
             // Convert PNG data URL to File
-            const file = dataURLtoFile(png, "diagram.png");
+            const file = dataURLtoFile(result.png, "diagram.png");
             console.log("[Drawio] Converted to File object");
 
             // Upload using Outline's image upload
@@ -50,14 +61,56 @@ export default function DrawioDialog({
             console.log("[Drawio] Image uploaded successfully", imageUrl);
 
             onSubmit({
-                xml: btoa(xml),  // base64 encode XML
+                xml: btoa(result.xml),  // base64 encode XML
                 imageUrl
             });
             onClose();
         } catch (error) {
             console.error("[Drawio] Failed to save diagram:", error);
         }
-    }, [onClose, onSubmit]);
+    }, [onClose, onSubmit, editorInstance]);
+
+    // Reset editor state when dialog opens/closes
+    useEffect(() => {
+        if (!isOpen) {
+            setIsEditorReady(false);
+            setEditorInstance(null);
+        }
+    }, [isOpen]);
+
+    // Initialize editor
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const initializeEditor = async () => {
+            try {
+                console.log("[Drawio] Waiting for editor to initialize...");
+                // Wait for a short delay to ensure the editor is ready
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Debug the ref
+                console.log("[Drawio] Ref current:", ref.current);
+                console.log("[Drawio] Ref current methods:", Object.keys(ref.current || {}));
+
+                // Get the editor instance
+                const editor = ref.current;
+                console.log("[Drawio] Editor instance:", editor);
+                console.log("[Drawio] Editor methods:", Object.keys(editor || {}));
+
+                if (editor && typeof editor.exportDiagram === 'function') {
+                    console.log("[Drawio] Got editor instance with exportDiagram method");
+                    setEditorInstance(editor);
+                    setIsEditorReady(true);
+                } else {
+                    console.error("[Drawio] Failed to get editor instance with required methods");
+                }
+            } catch (error) {
+                console.error("[Drawio] Error initializing editor:", error);
+            }
+        };
+
+        initializeEditor();
+    }, [isOpen]);
 
     // Keyboard shortcut for CTRL/CMD+S
     useEffect(() => {
@@ -95,7 +148,9 @@ export default function DrawioDialog({
                     </DrawioArea>
                     <Footer>
                         <button onClick={onClose}>Cancel</button>
-                        <button onClick={handleSave}>Save Diagram</button>
+                        <button onClick={handleSave} disabled={!isEditorReady}>
+                            {isEditorReady ? "Save Diagram" : "Loading..."}
+                        </button>
                     </Footer>
                 </DialogContainer>
             </Dialog>
