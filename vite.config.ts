@@ -56,9 +56,9 @@ export default () =>
       fs:
         environment.NODE_ENV === "development"
           ? {
-              // Allow serving files from one level up to the project root
-              allow: [".."],
-            }
+            // Allow serving files from one level up to the project root
+            allow: [".."],
+          }
           : { strict: true },
     },
     plugins: [
