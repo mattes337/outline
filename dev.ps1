@@ -96,7 +96,7 @@ function Debug-Environment {
     docker-compose -f docker-compose.dev.yml build outline
 
     # Start with extra debugging environment variables
-    $env:DEBUG="vite:*,nodemon:*,http,express:*,socket.io:*"
+    #$env:DEBUG="vite:*,nodemon:*,http,express:*,socket.io:*"
     $env:VITE_ENABLE_HMR="true"
     $env:CHOKIDAR_USEPOLLING="true"
     $env:WATCHPACK_POLLING="true"

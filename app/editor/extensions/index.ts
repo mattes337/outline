@@ -15,6 +15,17 @@ import createDrawioPlugin from "../plugins/drawio";
 
 type Nodes = (typeof Node | typeof Mark | typeof Extension)[];
 
+// Create a proper Extension class for Draw.io
+class DrawioExtension extends Extension {
+  get name() {
+    return "drawio";
+  }
+
+  get plugins() {
+    return [createDrawioPlugin()];
+  }
+}
+
 export const withUIExtensions = (nodes: Nodes) => [
   ...nodes,
   SmartText,
@@ -28,6 +39,6 @@ export const withUIExtensions = (nodes: Nodes) => [
   // Order these default key handlers last
   PreventTab,
   Keys,
-  // Register Drawio plugin
-  createDrawioPlugin(),
+  // Register Drawio plugin as a proper extension
+  DrawioExtension,
 ];

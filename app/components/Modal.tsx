@@ -87,8 +87,8 @@ const Modal: React.FC<Props> = ({
                     isMobile
                       ? undefined
                       : {
-                          marginLeft: `${depth * 12}px`,
-                        }
+                        marginLeft: `${depth * 12}px`,
+                      }
                   }
                   {...props}
                 >
@@ -139,7 +139,7 @@ const Modal: React.FC<Props> = ({
   );
 };
 
-const Backdrop = styled(Flex)<{ $fullscreen?: boolean }>`
+const Backdrop = styled(Flex) <{ $fullscreen?: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
@@ -147,7 +147,7 @@ const Backdrop = styled(Flex)<{ $fullscreen?: boolean }>`
   bottom: 0;
   background-color: ${(props) =>
     props.$fullscreen
-      ? transparentize(0.25, props.theme.background)
+      ? transparentize(0.25, props.theme.background || "#FFFFFF")
       : props.theme.modalBackdrop} !important;
   z-index: ${depths.overlay};
   transition: opacity 50ms ease-in-out;
@@ -180,8 +180,8 @@ const Fullscreen = styled.div<FullscreenProps>`
 
   ${breakpoint("tablet")`
   ${(props: FullscreenProps) =>
-    props.$nested &&
-    `
+      props.$nested &&
+      `
       box-shadow: 0 -2px 10px ${props.theme.shadow};
       border-radius: 8px 0 0 8px;
       overflow: hidden;

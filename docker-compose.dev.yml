@@ -26,8 +26,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - FILE_STORAGE=local
       - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
-      - DEBUG=vite:*,nodemon:*,http,express:*,socket.io:*
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=error
       - DEVELOPMENT_UNSAFE_INLINE_CSP=true
       - SECRET_KEY=F0E5AD933D7F6FD8F4DBB3E038C501C052DC0593C686D21ACB30AE205D2F634B
       - UTILS_SECRET=F0E5AD933D7F6FD8F4DBB3E038C501C052DC0593C686D21ACB30AE205D2F634B
@@ -40,6 +39,8 @@ services:
       - VITE_HMR_HOST=0.0.0.0
       - VITE_HMR_PORT=3001
       - VITE_HMR_PROTOCOL=ws
+      - VITE_LOG_LEVEL=error
+      - VITE_DEBUG=false
     stdin_open: true
     tty: true
 

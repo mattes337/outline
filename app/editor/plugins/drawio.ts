@@ -2,6 +2,9 @@ import { Plugin } from "prosemirror-state";
 import Drawio from "@shared/editor/extensions/Drawio";
 import DrawioDialog from "@components/DrawioDialog";
 import DrawioComponent from "@components/DrawioComponent";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import { light as defaultTheme } from "@shared/styles/theme";
 
 interface DrawioDialogProps {
     isOpen: boolean;
@@ -21,18 +24,50 @@ declare global {
     }
 }
 
+// Create a wrapper component that will handle the portal
+const DrawioDialogPortal: React.FC<DrawioDialogProps> = (props) => {
+    const [container] = React.useState(() => {
+        const div = document.createElement('div');
+        document.body.appendChild(div);
+        return div;
+    });
+
+    React.useEffect(() => {
+        return () => {
+            document.body.removeChild(container);
+        };
+    }, [container]);
+
+    return ReactDOM.createPortal(
+        React.createElement(DrawioDialog, props),
+        container
+    );
+};
+
 export default function createDrawioPlugin() {
-    let dialog: DrawioDialog | null = null;
+    let dialogContainer: HTMLDivElement | null = null;
+
+    const renderDialog = (props: DrawioDialogProps) => {
+        if (!dialogContainer) {
+            dialogContainer = document.createElement('div');
+            document.body.appendChild(dialogContainer);
+        }
+        ReactDOM.render(React.createElement(DrawioDialogPortal, props), dialogContainer);
+    };
 
     const handleNewDiagram = () => {
         console.log("[Drawio] handleNewDiagram called");
-        if (!dialog) {
+        if (!dialogContainer) {
             console.log("[Drawio] Creating new dialog");
-            dialog = new DrawioDialog({
+            renderDialog({
                 isOpen: true,
                 onClose: () => {
                     console.log("[Drawio] Dialog closed");
-                    dialog = null;
+                    if (dialogContainer) {
+                        ReactDOM.unmountComponentAtNode(dialogContainer);
+                        document.body.removeChild(dialogContainer);
+                        dialogContainer = null;
+                    }
                 },
                 onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
                     console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl });
@@ -48,12 +83,16 @@ export default function createDrawioPlugin() {
 
     const handleEditDiagram = (event: CustomEvent) => {
         const { pos, xml } = event.detail;
-        if (!dialog) {
-            dialog = new DrawioDialog({
+        if (!dialogContainer) {
+            renderDialog({
                 isOpen: true,
                 initialXml: xml,
                 onClose: () => {
-                    dialog = null;
+                    if (dialogContainer) {
+                        ReactDOM.unmountComponentAtNode(dialogContainer);
+                        document.body.removeChild(dialogContainer);
+                        dialogContainer = null;
+                    }
                 },
                 onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
                     const { state, dispatch } = window.editor.view;
@@ -72,7 +111,34 @@ export default function createDrawioPlugin() {
         props: {
             nodeViews: {
                 drawio: (node, view, getPos) => {
-                    return new DrawioComponent({ node, view, getPos });
+                    const isDark = window.document.documentElement.getAttribute('data-theme') === 'dark';
+                    const container = document.createElement('div');
+                    ReactDOM.render(
+                        React.createElement(DrawioComponent, {
+                            node,
+                            view,
+                            theme: {
+                                ...defaultTheme,
+                                isDark
+                            },
+                            isSelected: false,
+                            isEditable: view.editable,
+                            getPos: () => {
+                                const pos = getPos();
+                                if (typeof pos !== 'number') {
+                                    throw new Error('Invalid position for drawio node');
+                                }
+                                return pos;
+                            }
+                        }),
+                        container
+                    );
+                    return {
+                        dom: container,
+                        destroy: () => {
+                            ReactDOM.unmountComponentAtNode(container);
+                        }
+                    };
                 },
             },
         },

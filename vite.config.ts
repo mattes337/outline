@@ -30,6 +30,7 @@ export default () =>
     root: "./",
     publicDir: "./server/static",
     base: (environment.CDN_URL ?? "") + "/static/",
+    logLevel: 'error',
     server: {
       port: 3001,
       host: true,
@@ -47,6 +48,8 @@ export default () =>
         clientPort: environment.NODE_ENV === "development" ? undefined : 3001,
         // Add timeout to help with Docker networking delays
         timeout: 10000,
+        // Disable verbose HMR logging
+        quiet: true,
       },
       watch: {
         // Use polling in Docker environment for more reliable file watching
@@ -208,6 +211,7 @@ export default () =>
       alias: {
         "~": path.resolve(__dirname, "./app"),
         "@shared": path.resolve(__dirname, "./shared"),
+        '@components': path.resolve(__dirname, './app/components'),
       },
     },
     build: {

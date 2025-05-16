@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from "react";
 import Modal from "@components/Modal";
-import Drawio from "react-drawio";
+import { DrawIoEmbed } from "react-drawio";
 import { uploadImage } from "@shared/utils/uploadImage";
 
 interface Props {
@@ -62,24 +62,28 @@ export default function DrawioDialog({
             isOpen={isOpen}
             onRequestClose={onClose}
             title="Draw.io Diagram"
-            width="full"
+            fullscreen
         >
             <div style={{ height: "80vh", width: "100%" }}>
-                <Drawio
+                <DrawIoEmbed
                     ref={ref}
                     xml={initialXml ? atob(initialXml) : undefined}
-                    config={{
-                        theme: "dark",
-                        defaultFonts: ["Inter"],
+                    urlParameters={{
+                        ui: "dark",
+                        libraries: true,
+                        saveAndExit: false,
+                        noExitBtn: true,
+                        noSaveBtn: true
+                    }}
+                    configuration={{
+                        defaultFonts: ["Inter"]
                     }}
                 />
             </div>
-            <Modal.Footer>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px" }}>
                 <button onClick={onClose}>Cancel</button>
-                <button onClick={handleSave} type="primary">
-                    Save Diagram
-                </button>
-            </Modal.Footer>
+                <button onClick={handleSave}>Save Diagram</button>
+            </div>
         </Modal>
     );
 } 
