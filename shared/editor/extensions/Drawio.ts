@@ -1,5 +1,6 @@
-import { NodeSpec } from "prosemirror-model";
+import { NodeSpec, NodeType } from "prosemirror-model";
 import Node from "../nodes/Node";
+import { Command } from "prosemirror-state";
 
 export default class Drawio extends Node {
     get name() {
@@ -33,6 +34,15 @@ export default class Drawio extends Node {
                     class: "drawio-diagram",
                 },
             ],
+        };
+    }
+
+    commands({ type }: { type: NodeType }) {
+        return {
+            drawio: (): Command => (state, dispatch) => {
+                window.dispatchEvent(new CustomEvent("outline:drawio:new"));
+                return true;
+            },
         };
     }
 } 
