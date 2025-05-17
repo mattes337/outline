@@ -39,9 +39,18 @@ export default class Drawio extends Node {
 
     commands({ type }: { type: NodeType }) {
         return {
-            drawio: (): Command => (state, dispatch) => {
+            drawio: (): Command => (state, dispatch, view) => {
                 console.log("[Drawio] Command triggered");
-                window.dispatchEvent(new CustomEvent("outline:drawio:new"));
+                if (!view) {
+                    console.error("[Drawio] No editor view available");
+                    return false;
+                }
+
+                window.editor = { view };
+
+                const event = new CustomEvent("outline:drawio:new");
+                window.dispatchEvent(event);
+
                 return true;
             },
         };

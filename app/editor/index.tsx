@@ -438,7 +438,7 @@ export class Editor extends React.PureComponent<
         (step) =>
           (step instanceof ReplaceAroundStep || step instanceof ReplaceStep) &&
           step.slice.content?.firstChild?.type.name ===
-            this.schema.nodes.checkbox_item.name
+          this.schema.nodes.checkbox_item.name
       );
 
     const isEditingComment = (tr: Transaction) =>
@@ -827,7 +827,7 @@ export class Editor extends React.PureComponent<
   }
 }
 
-const EditorContainer = styled(Styles)<{
+const EditorContainer = styled(Styles) <{
   userId?: string;
   focusedCommentId?: string;
 }>`
@@ -849,8 +849,8 @@ const EditorContainer = styled(Styles)<{
 
         &.ProseMirror-selectednode {
           outline-color: ${props.readOnly
-            ? "transparent"
-            : darken(0.2, props.theme.textHighlight)};
+        ? "transparent"
+        : darken(0.2, props.theme.textHighlight)};
         }
       }
     `}

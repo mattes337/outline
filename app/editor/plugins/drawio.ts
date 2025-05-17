@@ -48,6 +48,7 @@ export default function createDrawioPlugin() {
     let dialogContainer: HTMLDivElement | null = null;
     let editorView: any = null;
     let isDialogOpen = false;
+    let isInitialized = false;
 
     const renderDialog = (props: DrawioDialogProps) => {
         if (!dialogContainer) {
@@ -57,40 +58,61 @@ export default function createDrawioPlugin() {
         ReactDOM.render(React.createElement(DrawioDialogPortal, props), dialogContainer);
     };
 
-    const handleNewDiagram = () => {
+    const handleNewDiagram = (event: Event) => {
         console.log("[Drawio] handleNewDiagram called");
-        if (!isDialogOpen) {
-            console.log("[Drawio] Creating new dialog");
-            isDialogOpen = true;
-            renderDialog({
-                isOpen: true,
-                onClose: () => {
-                    console.log("[Drawio] Dialog closed");
-                    isDialogOpen = false;
-                    if (dialogContainer) {
-                        ReactDOM.unmountComponentAtNode(dialogContainer);
-                        document.body.removeChild(dialogContainer);
-                        dialogContainer = null;
-                    }
-                },
-                onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
-                    console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl });
-                    if (!editorView) {
-                        console.error("[Drawio] Editor view not available");
-                        return;
-                    }
-                    try {
-                        const { state, dispatch } = editorView;
-                        const { tr } = state;
-                        const node = state.schema.nodes.drawio.create({ xml, imageUrl });
-                        tr.replaceSelectionWith(node);
-                        dispatch(tr);
-                    } catch (error) {
-                        console.error("[Drawio] Error inserting diagram:", error);
-                    }
-                },
-            });
+
+        // Get the editor view from the window object
+        if (window.editor?.view) {
+            editorView = window.editor.view;
+            isInitialized = true;
         }
+
+        // Check if we're properly initialized
+        if (!isInitialized) {
+            console.error("[Drawio] Plugin not properly initialized");
+            return;
+        }
+
+        if (!editorView) {
+            console.error("[Drawio] Editor view not initialized");
+            return;
+        }
+
+        if (isDialogOpen) {
+            console.log("[Drawio] Dialog already open");
+            return;
+        }
+
+        console.log("[Drawio] Creating new dialog");
+        isDialogOpen = true;
+        renderDialog({
+            isOpen: true,
+            onClose: () => {
+                console.log("[Drawio] Dialog closed");
+                isDialogOpen = false;
+                if (dialogContainer) {
+                    ReactDOM.unmountComponentAtNode(dialogContainer);
+                    document.body.removeChild(dialogContainer);
+                    dialogContainer = null;
+                }
+            },
+            onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
+                console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl });
+                if (!editorView) {
+                    console.error("[Drawio] Editor view not available");
+                    return;
+                }
+                try {
+                    const { state, dispatch } = editorView;
+                    const { tr } = state;
+                    const node = state.schema.nodes.drawio.create({ xml, imageUrl });
+                    tr.replaceSelectionWith(node);
+                    dispatch(tr);
+                } catch (error) {
+                    console.error("[Drawio] Error inserting diagram:", error);
+                }
+            },
+        });
     };
 
     const handleEditDiagram = (event: CustomEvent) => {
@@ -147,10 +169,12 @@ export default function createDrawioPlugin() {
         view: (view) => {
             console.log("[Drawio] Plugin view initialized");
             editorView = view;
+            isInitialized = true;
             return {
                 destroy: () => {
                     console.log("[Drawio] Plugin view destroyed");
                     editorView = null;
+                    isInitialized = false;
                     cleanupEventListeners();
                 }
             };

@@ -36,6 +36,7 @@ export default function DrawioDialog({
     initialXml,
 }: Props) {
     const ref = useRef<any>();
+    const dialogRef = useRef<HTMLDivElement>(null);
     const dialog = useDialogState({ visible: isOpen });
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorInstance, setEditorInstance] = useState<any>(null);
@@ -140,7 +141,7 @@ export default function DrawioDialog({
     return (
         <>
             <DialogBackdrop {...dialog} onClick={onClose} />
-            <Dialog {...dialog} aria-label="Draw.io Diagram">
+            <Dialog {...dialog} aria-label="Draw.io Diagram" ref={dialogRef}>
                 <DialogContainer>
                     <DrawioArea>
                         <DrawIoEmbed
