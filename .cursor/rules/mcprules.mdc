@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+When using a library, use Context7 to find the correct information about the usage and details.
+
+For context about the project and bugs, find and store information using the Qdrant tools.
