@@ -1,6 +1,8 @@
-import { NodeSpec, NodeType } from "prosemirror-model";
+import { NodeSpec, NodeType, Node as ProsemirrorNode } from "prosemirror-model";
 import Node from "../nodes/Node";
 import { Command } from "prosemirror-state";
+import { MarkdownSerializerState } from "../lib/markdown/serializer";
+import { ParseSpec } from "prosemirror-markdown";
 
 export default class Drawio extends Node {
     get name() {
@@ -27,13 +29,42 @@ export default class Drawio extends Node {
                 },
             ],
             toDOM: (node) => [
-                "drawio-diagram",
+                "div",
                 {
-                    xml: node.attrs.xml,
-                    imageUrl: node.attrs.imageUrl,
                     class: "drawio-diagram",
                 },
+                [
+                    "img",
+                    {
+                        src: node.attrs.imageUrl,
+                        alt: "Draw.io Diagram",
+                        class: "drawio-diagram",
+                    },
+                ],
             ],
+        };
+    }
+
+    toMarkdown(state: MarkdownSerializerState, node: ProsemirrorNode) {
+        state.write(`![diagram](${node.attrs.imageUrl})`);
+        state.ensureNewLine();
+        state.write("```drawio");
+        state.ensureNewLine();
+        state.text(node.attrs.xml, false);
+        state.ensureNewLine();
+        state.write("```");
+        state.closeBlock(node);
+    }
+
+    parseMarkdown(): ParseSpec {
+        return {
+            block: "drawio",
+            getAttrs: (tok: { info: string; content: string }) => {
+                if (tok.info === "drawio") {
+                    return { xml: tok.content.trim() };
+                }
+                return null;
+            },
         };
     }
 

@@ -256,10 +256,10 @@ export const light = buildLightTheme(defaultColors);
 
 export const drawioDiagramStyle = `
   max-width: 100%;
-  border: 1px solid {(props) => props.theme.divider};
+  border: 1px solid ${(props: { theme: DefaultTheme }) => props.theme.divider};
   border-radius: 4px;
   &:hover {
-    border-color: {(props) => props.theme.primary};
+    border-color: ${(props: { theme: DefaultTheme }) => props.theme.accent};
   }
 `;
 

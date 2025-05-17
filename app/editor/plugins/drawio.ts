@@ -106,7 +106,15 @@ export default function createDrawioPlugin() {
                     const { state, dispatch } = editorView;
                     const { tr } = state;
                     const node = state.schema.nodes.drawio.create({ xml, imageUrl });
-                    tr.replaceSelectionWith(node);
+
+                    // If there's a selection, replace it. Otherwise, insert at cursor position
+                    if (!state.selection.empty) {
+                        tr.replaceSelectionWith(node);
+                    } else {
+                        const pos = state.selection.from;
+                        tr.insert(pos, node);
+                    }
+
                     dispatch(tr);
                 } catch (error) {
                     console.error("[Drawio] Error inserting diagram:", error);
