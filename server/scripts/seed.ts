@@ -35,12 +35,26 @@ export default async function main(exit = false) {
     });
 
     console.log(
+      "trace",
+      `Seed: Created new team and user for email: ${email}`
+    );
+    console.log(
       "email",
-      `✅ Seed done – sign-in link: ${
-        env.URL
+      `✅ Seed done – sign-in link: ${env.URL
       }/auth/email.callback?token=${user.getEmailSigninToken()}`
     );
   } else {
+    console.log("trace", "Seed: Team already exists, looking up user by email");
+    const user = await User.findOne({ where: { email } });
+    if (user) {
+      console.log(
+        "email",
+        `ℹ️ Team already exists – sign-in link: ${env.URL
+        }/auth/email.callback?token=${user.getEmailSigninToken()}`
+      );
+    } else {
+      console.log("warn", `No user found with email: ${email}`);
+    }
     console.log("Team already exists, aborting");
   }
 

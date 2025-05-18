@@ -15,6 +15,7 @@ services:
     volumes:
       # Use delegated mode for better performance with hot reload
       - .:/opt/outline:delegated
+      #- ./server/migrations:/opt/outline/build/server/scripts
       - outline-node-modules:/opt/outline/node_modules
       - outline-data:/var/lib/outline/data
       # Exclude node_modules from the bind mount to improve performance
