@@ -1,5 +1,4 @@
 import { Plugin } from "prosemirror-state";
-import Drawio from "@shared/editor/extensions/Drawio";
 import DrawioDialog from "~/components/DrawioDialog";
 import DrawioComponent from "~/components/DrawioComponent";
 import * as React from "react";

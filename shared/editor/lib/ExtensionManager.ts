@@ -11,7 +11,6 @@ import Node from "../nodes/Node";
 import Extension, { CommandFactory } from "./Extension";
 import makeRules from "./markdown/rules";
 import { MarkdownSerializer } from "./markdown/serializer";
-import { Plugin, PluginKey } from "prosemirror-state";
 
 export default class ExtensionManager {
   extensions: (Node | Mark | Extension)[] = [];
@@ -26,8 +25,6 @@ export default class ExtensionManager {
     editor?: Editor
   ) {
     extensions.forEach((ext) => {
-      if (!ext) return; // Skip undefined or null extensions
-
       let extension;
 
       if (typeof ext === "function") {
@@ -166,21 +163,9 @@ export default class ExtensionManager {
   }
 
   get plugins() {
-    const pluginMap = new Map<string, Plugin>();
-    this.extensions
+    return this.extensions
       .filter((extension) => "plugins" in extension)
-      .forEach(({ plugins }) => {
-        plugins.forEach((plugin: Plugin) => {
-          const key = plugin.spec.key?.toString();
-          if (key) {
-            pluginMap.set(key, plugin);
-          } else {
-            // If no key is available, use the plugin instance itself as a key
-            pluginMap.set(plugin.toString(), plugin);
-          }
-        });
-      });
-    return Array.from(pluginMap.values());
+      .reduce((allPlugins, { plugins }) => [...allPlugins, ...plugins], []);
   }
 
   get rulePlugins() {

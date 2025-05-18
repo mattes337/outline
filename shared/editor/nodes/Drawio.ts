@@ -1,5 +1,5 @@
 import { NodeSpec, NodeType, Node as ProsemirrorNode } from "prosemirror-model";
-import Node from "../nodes/Node";
+import Node from "./Node";
 import { Command } from "prosemirror-state";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
 import { ParseSpec } from "prosemirror-markdown";

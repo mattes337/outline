@@ -22,7 +22,7 @@ import CheckboxList from "./CheckboxList";
 import CodeBlock from "./CodeBlock";
 import CodeFence from "./CodeFence";
 import Doc from "./Doc";
-import Drawio from "../extensions/Drawio";
+import Drawio from "./Drawio";
 import Embed from "./Embed";
 import Emoji from "./Emoji";
 import HardBreak from "./HardBreak";
