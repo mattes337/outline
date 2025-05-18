@@ -158,7 +158,7 @@ export default function DrawioDialog({
       const imageUrl = await uploadImage(file);
 
       onSubmit({ 
-        xml: btoa(xml),  // base64 encode XML
+        xml: xml,  // store raw XML, not base64
         imageUrl 
       });
       onClose();

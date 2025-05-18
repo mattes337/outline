@@ -67,8 +67,9 @@ export default function DrawioDialog({
         console.log("[Drawio] Converted to File object with filename:", exportFilename);
         uploadImage(file).then(imageUrl => {
             console.log("[Drawio] Image uploaded successfully", imageUrl);
+            console.log("[Drawio] Storing raw XML (first 100 chars):", data.xml.substring(0, 100));
             onSubmit({
-                xml: btoa(data.xml),
+                xml: data.xml,
                 imageUrl,
                 filename: exportFilename,
             });
@@ -162,7 +163,7 @@ export default function DrawioDialog({
                     <DrawioArea>
                         <DrawIoEmbed
                             ref={ref}
-                            xml={initialXml ? atob(initialXml) : undefined}
+                            xml={initialXml ? initialXml : undefined}
                             urlParameters={{
                                 ui: "dark",
                                 libraries: true,
