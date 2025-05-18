@@ -195,6 +195,7 @@ export default function createDrawioPlugin() {
                 drawio: (node, view, getPos) => {
                     const isDark = window.document.documentElement.getAttribute('data-theme') === 'dark';
                     const container = document.createElement('div');
+                    container.className = "drawio-node-container";
                     console.log("[Drawio] Rendering nodeView for drawio", { node, pos: getPos() });
                     ReactDOM.render(
                         React.createElement(DrawioComponent, {
