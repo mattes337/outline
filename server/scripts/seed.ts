@@ -34,13 +34,11 @@ export default async function main(exit = false) {
       );
     });
 
-    console.log(
-      "trace",
-      `Seed: Created new team and user for email: ${email}`
-    );
+    console.log("trace", `Seed: Created new team and user for email: ${email}`);
     console.log(
       "email",
-      `✅ Seed done – sign-in link: ${env.URL
+      `✅ Seed done – sign-in link: ${
+        env.URL
       }/auth/email.callback?token=${user.getEmailSigninToken()}`
     );
   } else {
@@ -49,7 +47,8 @@ export default async function main(exit = false) {
     if (user) {
       console.log(
         "email",
-        `ℹ️ Team already exists – sign-in link: ${env.URL
+        `ℹ️ Team already exists – sign-in link: ${
+          env.URL
         }/auth/email.callback?token=${user.getEmailSigninToken()}`
       );
     } else {
