@@ -49,7 +49,7 @@ export default function createDrawioPlugin() {
     let isDialogOpen = false;
     let isInitialized = false;
 
-    const renderDialog = (props: DrawioDialogProps) => {
+    const renderDialog = (props: DrawioDialogProps & { initialFilename?: string }) => {
         if (!dialogContainer) {
             dialogContainer = document.createElement('div');
             document.body.appendChild(dialogContainer);
@@ -59,33 +59,29 @@ export default function createDrawioPlugin() {
 
     const handleNewDiagram = (event: Event) => {
         console.log("[Drawio] handleNewDiagram called");
-
         // Get the editor view from the window object
         if (window.editor?.view) {
             editorView = window.editor.view;
             isInitialized = true;
         }
-
         // Check if we're properly initialized
         if (!isInitialized) {
             console.error("[Drawio] Plugin not properly initialized");
             return;
         }
-
         if (!editorView) {
             console.error("[Drawio] Editor view not initialized");
             return;
         }
-
         if (isDialogOpen) {
             console.log("[Drawio] Dialog already open");
             return;
         }
-
         console.log("[Drawio] Creating new dialog");
         isDialogOpen = true;
         renderDialog({
             isOpen: true,
+            initialFilename: "diagram.png",
             onClose: () => {
                 console.log("[Drawio] Dialog closed");
                 isDialogOpen = false;
@@ -95,8 +91,8 @@ export default function createDrawioPlugin() {
                     dialogContainer = null;
                 }
             },
-            onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
-                console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl });
+            onSubmit: ({ xml, imageUrl, filename }: { xml: string; imageUrl: string; filename: string }) => {
+                console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl, filename });
                 if (!editorView) {
                     console.error("[Drawio] Editor view not available");
                     return;
@@ -104,8 +100,7 @@ export default function createDrawioPlugin() {
                 try {
                     const { state, dispatch } = editorView;
                     const { tr } = state;
-                    const node = state.schema.nodes.drawio.create({ xml, imageUrl });
-
+                    const node = state.schema.nodes.drawio.create({ xml, imageUrl, filename });
                     // If there's a selection, replace it. Otherwise, insert at cursor position
                     if (!state.selection.empty) {
                         tr.replaceSelectionWith(node);
@@ -113,7 +108,6 @@ export default function createDrawioPlugin() {
                         const pos = state.selection.from;
                         tr.insert(pos, node);
                     }
-
                     dispatch(tr);
                 } catch (error) {
                     console.error("[Drawio] Error inserting diagram:", error);
@@ -124,11 +118,21 @@ export default function createDrawioPlugin() {
 
     const handleEditDiagram = (event: CustomEvent) => {
         const { pos, xml } = event.detail;
+        console.log("[Drawio] handleEditDiagram called", { pos, xml });
         if (!isDialogOpen) {
             isDialogOpen = true;
+            // Get the current filename from the node at pos
+            let filename = "diagram.png";
+            if (editorView && typeof pos === 'number') {
+                const node = editorView.state.doc.nodeAt(pos);
+                if (node && node.attrs && node.attrs.filename) {
+                    filename = node.attrs.filename;
+                }
+            }
             renderDialog({
                 isOpen: true,
                 initialXml: xml,
+                initialFilename: filename,
                 onClose: () => {
                     isDialogOpen = false;
                     if (dialogContainer) {
@@ -137,7 +141,7 @@ export default function createDrawioPlugin() {
                         dialogContainer = null;
                     }
                 },
-                onSubmit: ({ xml, imageUrl }: { xml: string; imageUrl: string }) => {
+                onSubmit: ({ xml, imageUrl, filename }: { xml: string; imageUrl: string; filename: string }) => {
                     if (!editorView) {
                         console.error("[Drawio] Editor view not available");
                         return;
@@ -145,7 +149,7 @@ export default function createDrawioPlugin() {
                     try {
                         const { state, dispatch } = editorView;
                         const { tr } = state;
-                        tr.setNodeMarkup(pos, undefined, { xml, imageUrl });
+                        tr.setNodeMarkup(pos, undefined, { xml, imageUrl, filename });
                         dispatch(tr);
                     } catch (error) {
                         console.error("[Drawio] Error updating diagram:", error);
@@ -191,6 +195,7 @@ export default function createDrawioPlugin() {
                 drawio: (node, view, getPos) => {
                     const isDark = window.document.documentElement.getAttribute('data-theme') === 'dark';
                     const container = document.createElement('div');
+                    console.log("[Drawio] Rendering nodeView for drawio", { node, pos: getPos() });
                     ReactDOM.render(
                         React.createElement(DrawioComponent, {
                             node,

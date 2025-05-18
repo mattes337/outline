@@ -8,7 +8,8 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     initialXml?: string;
-    onSubmit: (res: { xml: string; imageUrl: string }) => void;
+    onSubmit: (res: { xml: string; imageUrl: string; filename: string }) => void;
+    initialFilename?: string;
 }
 
 interface ExportData {
@@ -34,34 +35,44 @@ export default function DrawioDialog({
     onClose,
     onSubmit,
     initialXml,
+    initialFilename,
 }: Props) {
     const ref = useRef<any>();
     const dialogRef = useRef<HTMLDivElement>(null);
     const dialog = useDialogState({ visible: isOpen });
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorInstance, setEditorInstance] = useState<any>(null);
+    const [filename, setFilename] = useState(initialFilename || "New Diagram");
+
+    useEffect(() => {
+        if (isOpen) {
+            setFilename(initialFilename || "New Diagram");
+            console.log("[Drawio] Filename initialized:", initialFilename || "New Diagram");
+        }
+    }, [isOpen, initialFilename]);
+
+    const handleFilenameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFilename(e.target.value);
+        console.log("[Drawio] Filename changed:", e.target.value);
+    };
 
     const handleExport = useCallback((data: ExportData) => {
         console.log("[Drawio] Export data received:", data);
-
-        // Convert PNG data URL to File
-        const file = dataURLtoFile(data.data, "diagram.png");
-        console.log("[Drawio] Converted to File object");
-
-        // Upload using Outline's image upload
-        console.log("[Drawio] Starting image upload");
+        const file = dataURLtoFile(data.data, filename);
+        console.log("[Drawio] Converted to File object with filename:", filename);
         uploadImage(file).then(imageUrl => {
             console.log("[Drawio] Image uploaded successfully", imageUrl);
             onSubmit({
-                xml: btoa(data.xml),  // base64 encode XML
-                imageUrl
+                xml: btoa(data.xml),
+                imageUrl,
+                filename,
             });
             onClose();
         }).catch(error => {
             console.error("[Drawio] Failed to upload image:", error);
             throw new Error("Failed to upload image");
         });
-    }, [onSubmit, onClose]);
+    }, [onSubmit, onClose, filename]);
 
     const handleSave = useCallback(async () => {
         try {
@@ -161,6 +172,15 @@ export default function DrawioDialog({
                         />
                     </DrawioArea>
                     <Footer>
+                        <label style={{ flex: 1 }}>
+                            <span style={{ fontSize: 13, color: '#888', marginRight: 8 }}>Filename:</span>
+                            <input
+                                type="text"
+                                value={filename}
+                                onChange={handleFilenameChange}
+                                style={{ fontSize: 14, padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc', width: 200 }}
+                            />
+                        </label>
                         <button onClick={onClose}>Cancel</button>
                         <button onClick={handleSave} disabled={!isEditorReady}>
                             {isEditorReady ? "Save Diagram" : "Loading..."}

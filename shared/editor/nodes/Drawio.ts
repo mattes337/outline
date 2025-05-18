@@ -14,6 +14,7 @@ export default class Drawio extends Node {
             attrs: {
                 xml: { default: "" },
                 imageUrl: { default: "" },
+                filename: { default: "New Diagram" },
             },
             group: "block",
             draggable: false,
@@ -25,28 +26,28 @@ export default class Drawio extends Node {
                     getAttrs: (dom: HTMLElement) => ({
                         xml: dom.getAttribute("xml") || "",
                         imageUrl: dom.getAttribute("imageUrl") || "",
+                        filename: dom.getAttribute("filename") || "New Diagram",
                     }),
                 },
             ],
-            toDOM: (node) => [
-                "div",
-                {
-                    class: "drawio-diagram",
-                },
-                [
-                    "img",
+            toDOM: (node) => {
+                console.log("[Drawio] toDOM called with filename:", node.attrs.filename);
+                return [
+                    "drawio-diagram",
                     {
-                        src: node.attrs.imageUrl,
-                        alt: "Draw.io Diagram",
                         class: "drawio-diagram",
+                        xml: node.attrs.xml,
+                        imageUrl: node.attrs.imageUrl,
+                        filename: node.attrs.filename,
                     },
-                ],
-            ],
+                ];
+            },
         };
     }
 
     toMarkdown(state: MarkdownSerializerState, node: ProsemirrorNode) {
-        state.write(`![diagram](${node.attrs.imageUrl})`);
+        console.log("[Drawio] Serializing to markdown with filename:", node.attrs.filename);
+        state.write(`![${node.attrs.filename || "New Diagram"}](${node.attrs.imageUrl})`);
         state.ensureNewLine();
         state.write("```drawio");
         state.ensureNewLine();

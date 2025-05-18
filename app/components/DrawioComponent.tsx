@@ -34,6 +34,7 @@ const TopBar = styled.div`
   justify-content: space-between;
   background: transparent;
   padding: 0 8px;
+  cursor: move;
 `;
 
 const Filename = styled.span`
