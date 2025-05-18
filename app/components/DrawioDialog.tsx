@@ -43,36 +43,41 @@ export default function DrawioDialog({
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorInstance, setEditorInstance] = useState<any>(null);
     const [filename, setFilename] = useState(initialFilename || "New Diagram");
+    const filenameRef = useRef(filename);
 
     useEffect(() => {
         if (isOpen) {
             setFilename(initialFilename || "New Diagram");
+            filenameRef.current = initialFilename || "New Diagram";
             console.log("[Drawio] Filename initialized:", initialFilename || "New Diagram");
         }
     }, [isOpen, initialFilename]);
 
     const handleFilenameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFilename(e.target.value);
+        filenameRef.current = e.target.value;
         console.log("[Drawio] Filename changed:", e.target.value);
     };
 
     const handleExport = useCallback((data: ExportData) => {
+        const exportFilename = filenameRef.current;
         console.log("[Drawio] Export data received:", data);
-        const file = dataURLtoFile(data.data, filename);
-        console.log("[Drawio] Converted to File object with filename:", filename);
+        console.log("[Drawio] Using filename for export (ref):", exportFilename);
+        const file = dataURLtoFile(data.data, exportFilename);
+        console.log("[Drawio] Converted to File object with filename:", exportFilename);
         uploadImage(file).then(imageUrl => {
             console.log("[Drawio] Image uploaded successfully", imageUrl);
             onSubmit({
                 xml: btoa(data.xml),
                 imageUrl,
-                filename,
+                filename: exportFilename,
             });
             onClose();
         }).catch(error => {
             console.error("[Drawio] Failed to upload image:", error);
             throw new Error("Failed to upload image");
         });
-    }, [onSubmit, onClose, filename]);
+    }, [onSubmit, onClose]);
 
     const handleSave = useCallback(async () => {
         try {
