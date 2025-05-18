@@ -9,29 +9,33 @@ const Frame = styled.div`
   border-radius: 8px;
   background: #f8f8f8;
   position: relative;
-  padding: 24px 16px 16px 16px;
+  padding: 8px 24px 8px 16px;
+  padding-right: 40px; /* Add space for icon group */
   margin: 16px 0;
   display: inline-block;
   min-width: 200px;
+  /* Prevent ProseMirror blue outline when selected */
+  &.ProseMirror-selectednode,
+  &.ProseMirror-selectednode:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 `;
 
 const DiagramImage = styled.img`
   ${drawioDiagramStyle}
   display: block;
   max-width: 100%;
-  margin: 24px auto 0 auto; /* 24px matches the TopBar height */
+  margin: 12px auto 0 auto; /* 24px matches the TopBar height */
   cursor: pointer;
 `;
 
 const TopBar = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   width: 100%;
   height: 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   background: transparent;
   padding: 0 8px;
   cursor: move;
@@ -47,8 +51,13 @@ const Filename = styled.span`
 `;
 
 const IconGroup = styled.div`
+  position: absolute;
+  top: 0;
+  right: -8px;
+  height: 24px;
   display: flex;
   gap: 8px;
+  align-items: center;
 `;
 
 const IconButton = styled.button`
@@ -74,6 +83,10 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
     const { imageUrl, xml, filename } = node.attrs;
     // Fallback filename if not present
     const displayFilename = filename || "diagram.png";
+
+    React.useEffect(() => {
+        console.log("[Drawio] Rendered DrawioComponent", { imageUrl, filename, pos: getPos && getPos() });
+    }, [imageUrl, filename, getPos]);
 
     const handleDoubleClick = () => {
         console.log("[Drawio] Double-clicked diagram, opening editor", { pos: getPos(), imageUrl });
@@ -104,7 +117,7 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
     };
 
     return (
-        <Frame>
+        <Frame className="drawio-frame">
             <TopBar>
                 <Filename>{displayFilename}</Filename>
                 <IconGroup>
