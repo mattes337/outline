@@ -103,11 +103,12 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
         if (!container) return;
         const handleWheelEvent = (e: WheelEvent) => {
             e.preventDefault();
-            if (!imgElementRef.current) return;
-            const imgRect = imgElementRef.current.getBoundingClientRect();
-            const mouseX = e.clientX - imgRect.left;
-            const mouseY = e.clientY - imgRect.top;
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
             const prevZoom = zoom;
+
+            // Calculate new zoom level
             let newZoom = zoom;
             if (e.deltaY < 0) {
                 newZoom = Math.min(zoom + 0.2, 5);
@@ -115,15 +116,22 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
                 newZoom = Math.max(zoom - 0.2, 0.2);
             }
             if (newZoom === prevZoom) return;
+
+            // Calculate the point on the image that's under the cursor
+            // We need to go from screen coordinates to image coordinates
             const imgX = (mouseX - pan.x) / prevZoom;
             const imgY = (mouseY - pan.y) / prevZoom;
+
+            // Calculate new pan position
+            // The new pan position needs to ensure that the point we calculated above
+            // remains under the cursor after zooming
             const newPan = {
-                x: mouseX - imgX * newZoom,
-                y: mouseY - imgY * newZoom,
+                x: mouseX - (imgX * newZoom),
+                y: mouseY - (imgY * newZoom)
             };
+
             setZoom(newZoom);
             setPan(newPan);
-            console.log(`[Drawio] Zoom ${e.deltaY < 0 ? 'in' : 'out'}: ${newZoom}, pan adjusted to`, newPan, 'mouse:', { mouseX, mouseY }, 'img:', { imgX, imgY }, 'prevZoom:', prevZoom, 'newZoom:', newZoom);
         };
         container.addEventListener('wheel', handleWheelEvent, { passive: false });
         return () => container.removeEventListener('wheel', handleWheelEvent);
@@ -182,31 +190,7 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
             return newZoom;
         });
     };
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const prevZoom = zoom;
-        let newZoom = zoom;
-        if (e.deltaY < 0) {
-            newZoom = Math.min(zoom + 0.2, 5);
-        } else {
-            newZoom = Math.max(zoom - 0.2, 0.2);
-        }
-        if (newZoom === prevZoom) return;
-        const scale = newZoom / prevZoom;
-        // Correct pan adjustment to fix mouse position
-        const offsetX = mouseX - pan.x;
-        const offsetY = mouseY - pan.y;
-        const newPan = {
-            x: mouseX - offsetX * scale,
-            y: mouseY - offsetY * scale,
-        };
-        setZoom(newZoom);
-        setPan(newPan);
-        console.log(`[Drawio] Zoom ${e.deltaY < 0 ? 'in' : 'out'}: ${newZoom}, pan adjusted to`, newPan, 'mouse:', { mouseX, mouseY }, 'offset:', { offsetX, offsetY }, 'scale:', scale);
-    };
+
     // Pan controls
     const handleMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -314,6 +298,8 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
                                 alt="Expanded Draw.io Diagram"
                                 style={{
                                     transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                                    transformOrigin: '0 0', // <-- THIS IS CRUCIAL
+                                    willChange: 'transform',
                                     transition: dragging ? 'none' : 'transform 0.2s',
                                     maxWidth: 'none',
                                     maxHeight: 'none',
