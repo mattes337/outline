@@ -2,13 +2,13 @@ import React, { useRef, useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import { Dialog, DialogBackdrop, useDialogState } from "reakit/Dialog";
 import { DrawIoEmbed } from "react-drawio";
-import { uploadImage } from "@shared/utils/uploadImage";
+import { uploadImage, uploadXmlAttachment } from "@shared/utils/uploadImage";
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     initialXml?: string;
-    onSubmit: (res: { xml: string; imageUrl: string; filename: string }) => void;
+    onSubmit: (res: { xml: string; imageUrl: string; filename: string; xmlFilename: string }) => void;
     initialFilename?: string;
 }
 
@@ -59,25 +59,33 @@ export default function DrawioDialog({
         console.log("[Drawio] Filename changed:", e.target.value);
     };
 
-    const handleExport = useCallback((data: ExportData) => {
+    const handleExport = useCallback(async (data: ExportData) => {
         const exportFilename = filenameRef.current;
         console.log("[Drawio] Export data received:", data);
         console.log("[Drawio] Using filename for export (ref):", exportFilename);
         const file = dataURLtoFile(data.data, exportFilename);
         console.log("[Drawio] Converted to File object with filename:", exportFilename);
-        uploadImage(file).then(imageUrl => {
+        const xmlFilename = `${exportFilename}.xml`;
+        // Create a File object for the XML
+        const xmlFile = new File([data.xml], xmlFilename, { type: "text/xml" });
+        try {
+            // Upload image
+            const imageUrl = await uploadImage(file);
             console.log("[Drawio] Image uploaded successfully", imageUrl);
-            console.log("[Drawio] Storing raw XML (first 100 chars):", data.xml.substring(0, 100));
+            // Upload XML
+            const xmlUrl = await uploadXmlAttachment(xmlFile);
+            console.log("[Drawio] XML uploaded successfully", xmlUrl);
             onSubmit({
-                xml: data.xml,
+                xml: "", // Do not inline XML in markdown, only use for editing
                 imageUrl,
                 filename: exportFilename,
+                xmlFilename: xmlUrl, // Use the URL of the uploaded XML
             });
             onClose();
-        }).catch(error => {
-            console.error("[Drawio] Failed to upload image:", error);
-            throw new Error("Failed to upload image");
-        });
+        } catch (error) {
+            console.error("[Drawio] Failed to upload image or XML:", error);
+            throw new Error("Failed to upload image or XML");
+        }
     }, [onSubmit, onClose]);
 
     const handleSave = useCallback(async () => {
@@ -155,6 +163,12 @@ export default function DrawioDialog({
         return () => window.removeEventListener("keydown", handler);
     }, [isOpen, handleSave]);
 
+    useEffect(() => {
+        if (initialXml) {
+            console.log("[Drawio] Passing plain XML to DrawIoEmbed (first 100 chars):", initialXml.substring(0, 100));
+        }
+    }, [initialXml]);
+
     return (
         <>
             <DialogBackdrop {...dialog} onClick={onClose} />
@@ -163,7 +177,7 @@ export default function DrawioDialog({
                     <DrawioArea>
                         <DrawIoEmbed
                             ref={ref}
-                            xml={initialXml ? initialXml : undefined}
+                            xml={initialXml || undefined}
                             urlParameters={{
                                 ui: "dark",
                                 libraries: true,

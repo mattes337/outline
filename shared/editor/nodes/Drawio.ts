@@ -15,6 +15,7 @@ export default class Drawio extends Node {
                 xml: { default: "" },
                 imageUrl: { default: "" },
                 filename: { default: "New Diagram" },
+                xmlFilename: { default: "" },
             },
             group: "block",
             draggable: false,
@@ -47,13 +48,10 @@ export default class Drawio extends Node {
 
     toMarkdown(state: MarkdownSerializerState, node: ProsemirrorNode) {
         console.log("[Drawio] Serializing to markdown with filename:", node.attrs.filename);
+        console.log("[Drawio] Serializing with xmlFilename:", node.attrs.xmlFilename);
         state.write(`![${node.attrs.filename || "New Diagram"}](${node.attrs.imageUrl})`);
+        state.write(` <!-- drawio:xml=${node.attrs.xmlFilename} -->`);
         state.ensureNewLine();
-        state.write("```drawio");
-        state.ensureNewLine();
-        state.text(node.attrs.xml, false);
-        state.ensureNewLine();
-        state.write("```");
         state.closeBlock(node);
     }
 

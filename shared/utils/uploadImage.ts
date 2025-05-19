@@ -19,4 +19,19 @@ export async function uploadImage(file: File): Promise<string> {
     // For document attachments, we use the redirectUrl which is used by the serializer
     // to detect attachment vs link
     return attachment.url;
+}
+
+// Upload XML as an attachment
+export async function uploadXmlAttachment(file: File): Promise<string> {
+    // Validate that the file is XML
+    if (file.type !== "text/xml" && file.type !== "application/xml" && !file.name.endsWith('.xml')) {
+        throw new Error("File must be an XML file");
+    }
+    console.log("[Drawio] Uploading XML attachment", file.name, file.type);
+    const attachment = await uploadFile(file, {
+        preset: AttachmentPreset.DocumentAttachment,
+        name: file.name,
+    });
+    console.log("[Drawio] XML attachment uploaded", attachment.url);
+    return attachment.url;
 } 

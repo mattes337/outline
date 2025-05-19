@@ -9,7 +9,8 @@ interface DrawioDialogProps {
     isOpen: boolean;
     onClose: () => void;
     initialXml?: string;
-    onSubmit: (res: { xml: string; imageUrl: string }) => void;
+    onSubmit: (res: { xml: string; imageUrl: string; filename: string; xmlFilename: string }) => void;
+    initialFilename?: string;
 }
 
 declare global {
@@ -91,8 +92,8 @@ export default function createDrawioPlugin() {
                     dialogContainer = null;
                 }
             },
-            onSubmit: ({ xml, imageUrl, filename }: { xml: string; imageUrl: string; filename: string }) => {
-                console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl, filename });
+            onSubmit: ({ xml, imageUrl, filename, xmlFilename }: { xml: string; imageUrl: string; filename: string; xmlFilename: string }) => {
+                console.log("[Drawio] Dialog submitted", { xml: xml?.substring(0, 50) + "...", imageUrl, filename, xmlFilename });
                 if (!editorView) {
                     console.error("[Drawio] Editor view not available");
                     return;
@@ -100,7 +101,7 @@ export default function createDrawioPlugin() {
                 try {
                     const { state, dispatch } = editorView;
                     const { tr } = state;
-                    const node = state.schema.nodes.drawio.create({ xml, imageUrl, filename });
+                    const node = state.schema.nodes.drawio.create({ xml, imageUrl, filename, xmlFilename });
                     // If there's a selection, replace it. Otherwise, insert at cursor position
                     if (!state.selection.empty) {
                         tr.replaceSelectionWith(node);
@@ -116,22 +117,42 @@ export default function createDrawioPlugin() {
         });
     };
 
-    const handleEditDiagram = (event: CustomEvent) => {
-        const { pos, xml } = event.detail;
-        console.log("[Drawio] handleEditDiagram called", { pos, xml });
+    const handleEditDiagram = async (event: CustomEvent) => {
+        const { pos, xml, xmlFilename: eventXmlFilename } = event.detail;
+        console.log("[Drawio] handleEditDiagram called", { pos, xml, eventXmlFilename });
         if (!isDialogOpen) {
             isDialogOpen = true;
-            // Get the current filename from the node at pos
+            // Get the current filename and xmlFilename from the node at pos
             let filename = "diagram.png";
+            let xmlFilename = eventXmlFilename || "";
             if (editorView && typeof pos === 'number') {
                 const node = editorView.state.doc.nodeAt(pos);
-                if (node && node.attrs && node.attrs.filename) {
-                    filename = node.attrs.filename;
+                if (node && node.attrs) {
+                    if (node.attrs.filename) filename = node.attrs.filename;
+                    if (!xmlFilename && node.attrs.xmlFilename) xmlFilename = node.attrs.xmlFilename;
+                }
+            }
+            console.log("[Drawio] Using xmlFilename for edit:", xmlFilename);
+            let loadedXml = xml;
+            if (xmlFilename) {
+                try {
+                    console.log("[Drawio] Fetching XML from attachment URL:", xmlFilename);
+                    const response = await fetch(xmlFilename);
+                    console.log("[Drawio] Fetch response status:", response.status, response.statusText);
+                    if (!response.ok) {
+                        console.error("[Drawio] Fetch failed with status:", response.status, response.statusText);
+                    }
+                    const text = await response.text();
+                    console.log("[Drawio] Loaded XML from attachment (first 200 chars):", text.substring(0, 200));
+                    console.log("[Drawio] Loaded XML length:", text.length);
+                    loadedXml = text;
+                } catch (err) {
+                    console.error("[Drawio] Failed to fetch XML from attachment:", err);
                 }
             }
             renderDialog({
                 isOpen: true,
-                initialXml: xml,
+                initialXml: loadedXml,
                 initialFilename: filename,
                 onClose: () => {
                     isDialogOpen = false;
@@ -141,7 +162,7 @@ export default function createDrawioPlugin() {
                         dialogContainer = null;
                     }
                 },
-                onSubmit: ({ xml, imageUrl, filename }: { xml: string; imageUrl: string; filename: string }) => {
+                onSubmit: ({ xml, imageUrl, filename, xmlFilename }: { xml: string; imageUrl: string; filename: string; xmlFilename: string }) => {
                     if (!editorView) {
                         console.error("[Drawio] Editor view not available");
                         return;
@@ -149,7 +170,7 @@ export default function createDrawioPlugin() {
                     try {
                         const { state, dispatch } = editorView;
                         const { tr } = state;
-                        tr.setNodeMarkup(pos, undefined, { xml, imageUrl, filename });
+                        tr.setNodeMarkup(pos, undefined, { xml, imageUrl, filename, xmlFilename });
                         dispatch(tr);
                     } catch (error) {
                         console.error("[Drawio] Error updating diagram:", error);

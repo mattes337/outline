@@ -80,7 +80,7 @@ const IconButton = styled.button`
 `;
 
 export default function DrawioComponent({ node, view, getPos }: ComponentProps) {
-    const { imageUrl, xml, filename } = node.attrs;
+    const { imageUrl, xml, filename, xmlFilename } = node.attrs;
     // Fallback filename if not present
     const displayFilename = filename || "diagram.png";
 
@@ -92,7 +92,7 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
         console.log("[Drawio] Double-clicked diagram, opening editor", { pos: getPos(), imageUrl });
         window.dispatchEvent(
             new CustomEvent("outline:drawio:edit", {
-                detail: { pos: getPos(), xml },
+                detail: { pos: getPos(), xml, xmlFilename },
             })
         );
     };
@@ -102,7 +102,7 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
         console.log("[Drawio] Edit icon clicked, opening editor", { pos: getPos(), imageUrl });
         window.dispatchEvent(
             new CustomEvent("outline:drawio:edit", {
-                detail: { pos: getPos(), xml },
+                detail: { pos: getPos(), xml, xmlFilename },
             })
         );
     };
