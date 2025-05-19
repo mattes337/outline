@@ -322,12 +322,13 @@ class WebsocketProvider extends React.Component<Props> {
 
         const documentId = event.id;
         const document = documents.get(documentId);
+        const updatedById = event.updatedBy?.id;
+        const currentUserId = this.props.auth?.user?.id;
 
-        console.log("[DEBUG] After documents.add", {
-          documentId,
-          hasDocument: !!document,
-          isActive: this.props.ui.activeDocumentId === documentId,
-        });
+        if (updatedById === currentUserId) {
+          // Do not show a toast if the update was by the current user
+          return;
+        }
 
         // Check if this document is currently active
         if (this.props.ui.activeDocumentId === documentId) {
