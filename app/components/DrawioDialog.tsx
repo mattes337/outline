@@ -169,6 +169,11 @@ export default function DrawioDialog({
         }
     }, [initialXml]);
 
+    // Add trace logging for enabling/disabling
+    useEffect(() => {
+        console.log(`[Drawio] Filename input and Cancel button are now ${isEditorReady ? 'enabled' : 'disabled'}`);
+    }, [isEditorReady]);
+
     return (
         <>
             <DialogBackdrop {...dialog} onClick={onClose} />
@@ -199,9 +204,10 @@ export default function DrawioDialog({
                                 value={filename}
                                 onChange={handleFilenameChange}
                                 style={{ fontSize: 14, padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc', width: 200 }}
+                                disabled={!isEditorReady}
                             />
                         </label>
-                        <button onClick={onClose}>Cancel</button>
+                        <button onClick={onClose} disabled={!isEditorReady}>Cancel</button>
                         <button onClick={handleSave} disabled={!isEditorReady}>
                             {isEditorReady ? "Save Diagram" : "Loading..."}
                         </button>

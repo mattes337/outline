@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ComponentProps } from "@shared/editor/types";
 import styled from "styled-components";
 import { drawioDiagramStyle } from "@shared/styles/theme";
@@ -83,6 +83,7 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
     const { imageUrl, xml, filename, xmlFilename } = node.attrs;
     // Fallback filename if not present
     const displayFilename = filename || "diagram.png";
+    const [expanded, setExpanded] = useState(false);
 
     React.useEffect(() => {
         console.log("[Drawio] Rendered DrawioComponent", { imageUrl, filename, pos: getPos && getPos() });
@@ -116,6 +117,16 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
         }
     };
 
+    const handleImageClick = () => {
+        console.log("[Drawio] Diagram image clicked, expanding");
+        setExpanded(true);
+    };
+
+    const handleModalClose = () => {
+        console.log("[Drawio] Expanded modal closed");
+        setExpanded(false);
+    };
+
     return (
         <Frame className="drawio-frame">
             <TopBar>
@@ -133,8 +144,32 @@ export default function DrawioComponent({ node, view, getPos }: ComponentProps) 
                 src={imageUrl}
                 alt="Draw.io Diagram"
                 onDoubleClick={handleDoubleClick}
+                onClick={handleImageClick}
                 draggable={false}
             />
+            {expanded && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(0,0,0,0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000,
+                }} onClick={handleModalClose}>
+                    <img src={imageUrl} alt="Expanded Draw.io Diagram" style={{
+                        maxWidth: '90vw',
+                        maxHeight: '90vh',
+                        boxShadow: '0 4px 32px rgba(0,0,0,0.5)',
+                        borderRadius: 8,
+                        background: '#fff',
+                        padding: 12
+                    }} />
+                </div>
+            )}
         </Frame>
     );
 } 
