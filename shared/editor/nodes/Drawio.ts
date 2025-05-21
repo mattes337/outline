@@ -58,7 +58,20 @@ export default class Drawio extends Node {
     parseMarkdown(): ParseSpec {
         return {
             block: "drawio",
-            getAttrs: (tok: { info: string; content: string }) => {
+            getAttrs: (tok: any) => {
+                if (tok.type === "drawio_block" && tok.attrs) {
+                    const attrs: Record<string, string> = {};
+                    for (const [key, value] of tok.attrs) {
+                        attrs[key] = value;
+                    }
+                    console.log("[Drawio] parseMarkdown: matched drawio_block", attrs);
+                    return {
+                        imageUrl: attrs.imageUrl || "",
+                        filename: attrs.filename || "New Diagram",
+                        xmlFilename: attrs.xmlFilename || "",
+                    };
+                }
+                // fallback for code block (legacy)
                 if (tok.info === "drawio") {
                     return { xml: tok.content.trim() };
                 }
