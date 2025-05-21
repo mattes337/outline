@@ -3,6 +3,8 @@ import Node from "./Node";
 import { Command } from "prosemirror-state";
 import { MarkdownSerializerState } from "../lib/markdown/serializer";
 import { ParseSpec } from "prosemirror-markdown";
+import drawioRule from "../rules/drawio";
+import { PluginSimple } from "markdown-it";
 
 export default class Drawio extends Node {
     get name() {
@@ -97,5 +99,10 @@ export default class Drawio extends Node {
                 return true;
             },
         };
+    }
+
+    get rulePlugins(): PluginSimple[] {
+        console.log("[Drawio] rulePlugins getter called");
+        return [drawioRule];
     }
 } 
