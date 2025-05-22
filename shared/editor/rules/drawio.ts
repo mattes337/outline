@@ -14,7 +14,7 @@ function drawioRule(md: MarkdownIt) {
                 img.children &&
                 img.children.length === 1 &&
                 img.children[0].type === "image" &&
-                comment.type === "html_inline" &&
+                (comment.type === "html_inline" || comment.type === "html_block") &&
                 comment.content.trim().startsWith("<!-- drawio:xml=")
             ) {
                 // Extract info
