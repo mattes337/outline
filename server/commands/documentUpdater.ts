@@ -215,13 +215,21 @@ export default async function documentUpdater(
     await document.saveWithCtx(ctx);
 
     // Add isApiUpdate flag to the event data
-    await Event.createFromContext(ctx, {
+    const createdEvent = await Event.createFromContext(ctx, {
       ...event,
       data: {
         ...event.data,
         isApiUpdate: true,
       },
     });
+
+    // Enqueue task sync request
+    if (text !== undefined || title !== undefined) { // Sync if content or title changed
+      await createdEvent.queue("tasks.sync.request", {
+        documentId: document.id,
+        timestamp: document.updatedAt.toISOString(),
+      });
+    }
 
     // Notify collaboration service about the API update if text was changed
     if (text !== undefined && document.state) {

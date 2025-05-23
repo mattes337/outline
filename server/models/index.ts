@@ -67,3 +67,7 @@ export { default as WebhookSubscription } from "./WebhookSubscription";
 export { default as WebhookDelivery } from "./WebhookDelivery";
 
 export { default as Subscription } from "./Subscription";
+
+export { default as Task } from "./Task";
+
+export { default as TaskComment } from "./TaskComment";

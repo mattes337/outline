@@ -28,6 +28,8 @@ const Document = lazy(() => import("~/scenes/Document"));
 const Drafts = lazy(() => import("~/scenes/Drafts"));
 const Home = lazy(() => import("~/scenes/Home"));
 const Search = lazy(() => import("~/scenes/Search"));
+const TasksPage = lazy(() => import("~/scenes/TasksPage")); // Import TasksPage
+const TaskDetailPage = lazy(() => import("~/scenes/TaskDetailPage")); // Import TaskDetailPage
 const Trash = lazy(() => import("~/scenes/Trash"));
 
 const RedirectDocument = ({
@@ -71,6 +73,8 @@ function AuthenticatedRoutes() {
               {can.createDocument && (
                 <Route exact path={trashPath()} component={Trash} />
               )}
+              <Route exact path="/tasks" component={TasksPage} />
+              <Route exact path="/tasks/:guid" component={TaskDetailPage} />
               <Route path={`${homePath()}/:tab?`} component={Home} />
               <Redirect from="/dashboard" to={homePath()} />
               <Redirect exact from="/starred" to={homePath()} />

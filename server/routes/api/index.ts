@@ -43,6 +43,7 @@ import urls from "./urls";
 import userMemberships from "./userMemberships";
 import users from "./users";
 import views from "./views";
+import tasks from "./tasks";
 
 const api = new Koa<AppState, AppContext>();
 const router = new Router();
@@ -103,6 +104,7 @@ router.use("/", urls.routes());
 router.use("/", userMemberships.routes());
 router.use("/", reactions.routes());
 router.use("/", imports.routes());
+router.use("/", tasks.routes());
 
 if (!env.isCloudHosted) {
   router.use("/", installation.routes());

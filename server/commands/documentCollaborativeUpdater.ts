@@ -79,7 +79,7 @@ export default async function documentCollaborativeUpdater({
       }
     );
 
-    await Event.schedule({
+    const event = await Event.schedule({
       name: "documents.update",
       documentId: document.id,
       collectionId: document.collectionId,
@@ -91,6 +91,15 @@ export default async function documentCollaborativeUpdater({
         title: document.title,
         done: isLastConnection,
       },
+    });
+
+    // Enqueue task sync request
+    // document.updatedAt might not be set yet if hooks:false prevented it.
+    // Use the current time as a reliable timestamp for the sync request.
+    // The sync processor will check if a newer version of the document exists.
+    await event.queue("tasks.sync.request", {
+      documentId: document.id,
+      timestamp: new Date().toISOString(),
     });
   });
 }

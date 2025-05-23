@@ -76,6 +76,7 @@ export const listExtensions: Nodes = [
   BulletList,
   OrderedList,
   ListItem,
+  TaskItemNode, // Added TaskItemNode here
 ];
 
 export const tableExtensions: Nodes = [
@@ -93,6 +94,7 @@ export const tableExtensions: Nodes = [
  */
 export const richExtensions: Nodes = [
   ...basicExtensions.filter((n) => n !== SimpleImage),
+  TaskItemNode, // Also adding to richExtensions for completeness
   Image,
   HardBreak,
   CodeBlock,
