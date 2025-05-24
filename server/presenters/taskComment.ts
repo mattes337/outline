@@ -1,5 +1,5 @@
-import { TaskComment, User }s from "@server/models";
-import { presentUser }s from "./user";
+import { TaskComment, User } from "@server/models";
+import { presentUser } from "./user";
 
 export function presentTaskComment(comment: TaskComment) {
   return {
